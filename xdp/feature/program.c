@@ -132,6 +132,10 @@ int my_program(struct xdp_md *ctx) {
             return XDP_PASS;
         }
 
+        bool fwd = fwdNode == NULL;
+
+        struct FLOW_FEATURE_NODE *node = fwd ? fwdNode : backNode;
+
         if (fwdNode != NULL) {
             fwdNode->packet_num++;
             fwdNode->fwd_packet_num++;

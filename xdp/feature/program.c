@@ -37,6 +37,10 @@ struct FLOW_KEY {
 struct FLOW_FEATURE_NODE {
     u32 packetNum;
 
+    u32 minPacketLength;
+
+    u32 maxPacketLength;
+
     u32 totalPacketLength;
 
     u32 minIAT;
@@ -54,6 +58,8 @@ struct FLOW_FEATURE_NODE {
     u64 activeEndTime;
 
     u64 minActiveTime;
+
+    u64 maxActiveTime;
 
     u64 totalActiveTime;
 };
@@ -102,7 +108,6 @@ int my_program(struct xdp_md *ctx) {
             destinationTransportPort = uh->dest;
         }
 
-
         struct FLOW_KEY fwdFlowKey = {0, 0, 0, 0, 0, 0, 0};
         fwdFlowKey.protocolIdentifier = ip->protocol;
         fwdFlowKey.sourceIPAddress = ip->saddr;
@@ -117,20 +122,22 @@ int my_program(struct xdp_md *ctx) {
         if (fwdNode == NULL) {
             struct FLOW_FEATURE_NODE zero = {};
             zero.packetNum = 1;
-            zero.totalPacketLength = payload;
-            zero.flowStartTime = zero.flowEndTime = zero.activeStartTime = zero.activeEndTime;
+            zero.minPacketLength = zero.maxPacketLength = zero.totalPacketLength = payload;
+            zero.flowStartTime = zero.flowEndTime = zero.activeStartTime = zero.activeEndTime = currentTime;
             flow_table.insert(&fwdFlowKey, &zero);
             return XDP_PASS;
         }
 
         fwdNode->packetNum++;
+        fwdNode->minPacketLength = payload < fwdNode->minPacketLength ? payload : fwdNode->minPacketLength;
+        fwdNode->maxPacketLength = payload > fwdNode->maxPacketLength ? payload : fwdNode->maxPacketLength;
         fwdNode->totalPacketLength += payload;
 
         u64 currentIAT = currentTime - fwdNode->flowEndTime;
         fwdNode->flowEndTime = currentTime;
 
         fwdNode->minIAT =
-                fwdNode->maxIAT == 0 ? currentIAT : currentIAT < fwdNode->minIAT ? currentIAT : fwdNode->minIAT;
+                fwdNode->minIAT == 0 ? currentIAT : currentIAT < fwdNode->minIAT ? currentIAT : fwdNode->minIAT;
 
         fwdNode->maxIAT = currentIAT > fwdNode->maxIAT ? currentIAT : fwdNode->maxIAT;
 
@@ -138,31 +145,32 @@ int my_program(struct xdp_md *ctx) {
 
 
         if (currentTime - fwdNode->activeEndTime > activityTimeout) {
+            bpf_trace_printk("active timeout");
             if (fwdNode->activeEndTime > fwdNode->activeStartTime) {
                 int currentActive = fwdNode->activeEndTime - fwdNode->activeStartTime;
                 fwdNode->totalActiveTime += currentActive;
                 fwdNode->minActiveTime =
                         fwdNode->minActiveTime == 0 ? currentActive : currentActive < fwdNode->minActiveTime
                                                                       ? currentActive : fwdNode->minActiveTime;
+                fwdNode->maxActiveTime =
+                        currentActive > fwdNode->maxActiveTime ? currentActive : fwdNode->maxActiveTime;
                 fwdNode->activeStartTime = fwdNode->activeEndTime = currentTime;
-            } else {
-                fwdNode->activeStartTime = currentTime;
             }
+        } else {
+            fwdNode->activeEndTime = currentTime;
         }
 
         if (currentTime - fwdNode->flowStartTime > flowTimeout) {
             bpf_trace_printk("timeout");
             // for analysis
-            flow_table.delete(&flowKey);
+            flow_table.delete(&fwdFlowKey);
         }
 
         if (ip->protocol == IPPROTO_TCP && (fin == 1 || rst == 1)) {
             bpf_trace_printk("fin or rst");
             // for analysis
-            flow_table.delete(&flowKey);
+            flow_table.delete(&fwdFlowKey);
         }
-
-
     }
     return XDP_PASS;
 }

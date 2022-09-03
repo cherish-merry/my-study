@@ -27,14 +27,14 @@ while 1:
             print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
                                             dec2addr(k.destinationIPAddress), k.sourceTransportPort,
                                             k.destinationTransportPort))
-            print('flow_start_time:{},flow_last_time:{}'.format(v.flow_start_time, v.flow_last_time))
-            print('packet_num:{},fwd_packet_num:{},total_packet_length:{}'.format(v.packet_num, v.fwd_packet_num,
-                                                                                  v.total_packet_length))
-            print(
-                'min_IAT:{},total_IAT:{},min_fwd_IAT:{},total_bak_IAT:{}'.format(v.min_IAT, v.total_IAT, v.min_fwd_IAT,
-                                                                                 v.total_bak_IAT))
-            print('active_start_time:{},active_end_time:{},min_active_time:{},total_active_time:{}'.format(
-                v.active_start_time, v.active_end_time, v.min_active_time, v.total_active_time))
+            # print('flow_start_time:{},flow_last_time:{}'.format(v.flow_start_time, v.flow_last_time))
+            # print('packet_num:{},fwd_packet_num:{},total_packet_length:{}'.format(v.packet_num, v.fwd_packet_num,
+            #                                                                       v.total_packet_length))
+            # print(
+            #     'min_IAT:{},total_IAT:{},min_fwd_IAT:{},total_bak_IAT:{}'.format(v.min_IAT, v.total_IAT, v.min_fwd_IAT,
+            #                                                                      v.total_bak_IAT))
+            # print('active_start_time:{},active_end_time:{},min_active_time:{},total_active_time:{}'.format(
+            #     v.active_start_time, v.active_end_time, v.min_active_time, v.total_active_time))
             count = count + 1
         print("count:", count)
         time.sleep(1)

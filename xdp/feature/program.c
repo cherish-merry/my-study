@@ -62,7 +62,8 @@ struct FLOW_FEATURE_NODE {
     u64 total_active_time;
 };
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  10000);
-BPF_HASH(packet_cnt, u8, u32 );
+BPF_HASH(packet_cnt, u8, u32
+);
 
 
 int my_program(struct xdp_md *ctx) {
@@ -82,7 +83,7 @@ int my_program(struct xdp_md *ctx) {
 
     if (ip->protocol == IPPROTO_TCP || ip->protocol == IPPROTO_UDP) {
         u32 payload, sourceTransportPort, destinationTransportPort;
-        u16 fin,rst;
+        u16 fin, rst;
         if (ip->protocol == IPPROTO_TCP) {
             th = (struct tcphdr *) (ip + 1);
             if ((void *) (th + 1) > data_end) {
@@ -126,88 +127,66 @@ int my_program(struct xdp_md *ctx) {
         if (fwdNode == backNode) {
             struct FLOW_FEATURE_NODE zero = {};
             zero.packet_num = 1;
+            zero.fwd_packet_num = 1;
             zero.total_packet_length = payload;
             zero.flow_last_time = zero.flow_start_time = zero.active_start_time = zero.active_end_time = currentTime;
             flow_table.insert(&fwdFlowKey, &zero);
             return XDP_PASS;
         }
 
-        bool fwd = fwdNode == NULL;
+        if(backNode != NULL)  bpf_trace_printk("Hello World");
 
+        bool fwd = fwdNode != NULL;
         struct FLOW_FEATURE_NODE *node = fwd ? fwdNode : backNode;
+        struct FLOW_KEY flowKey = fwd ? fwdFlowKey : backFlowKey;
+        if (node != NULL) {
+            node->packet_num++;
+            node->total_packet_length += payload;
+            u64 currentIAT = currentTime - node->flow_last_time;
+            node->flow_last_time = currentTime;
 
-        if (fwdNode != NULL) {
-            fwdNode->packet_num++;
-            fwdNode->fwd_packet_num++;
-            fwdNode->total_packet_length += payload;
-            u64 currentIAT = currentTime - fwdNode->flow_last_time;
-            fwdNode->flow_last_time = currentTime;
+            node->min_IAT =
+                    node->min_IAT == 0 ? currentIAT : currentIAT < node->min_IAT ? currentIAT : node->min_IAT;
+            node->total_IAT += currentIAT;
 
-            fwdNode->min_IAT =
-                    fwdNode->min_IAT == 0 ? currentIAT : currentIAT < fwdNode->min_IAT ? currentIAT : fwdNode->min_IAT;
-            fwdNode->total_IAT += currentIAT;
+            if (fwdNode != NULL) {
+                node->fwd_packet_num++;
+                node->min_fwd_IAT =
+                        node->min_fwd_IAT == 0 ? currentIAT : currentIAT < node->min_fwd_IAT ? currentIAT
+                                                                                             : node->min_fwd_IAT;
+            }
 
-            fwdNode->min_fwd_IAT = fwdNode->min_fwd_IAT == 0 ? currentIAT : currentIAT < fwdNode->min_fwd_IAT ? currentIAT : fwdNode->min_fwd_IAT;
+            if (backNode != NULL) {
+                node->total_bak_IAT += currentIAT;
+            }
 
-            if(currentTime - fwdNode->active_end_time > activityTimeout){
-                if(fwdNode->active_end_time > fwdNode->active_start_time){
-                    int currentActive = fwdNode->active_end_time - fwdNode->active_start_time;
-                    fwdNode->total_active_time += currentActive;
-                    fwdNode->min_active_time = fwdNode->min_active_time == 0 ? currentActive : currentActive < fwdNode->min_active_time ? currentActive : fwdNode->min_active_time;
-                    fwdNode->active_start_time  = fwdNode->active_end_time = currentTime;
-                }else {
-                    fwdNode->active_end_time = currentTime;
+            if (currentTime - node->active_end_time > activityTimeout) {
+                if (node->active_end_time > node->active_start_time) {
+                    int currentActive = node->active_end_time - node->active_start_time;
+                    node->total_active_time += currentActive;
+                    node->min_active_time =
+                            node->min_active_time == 0 ? currentActive : currentActive < node->min_active_time
+                                                                         ? currentActive : node->min_active_time;
+                    node->active_start_time = node->active_end_time = currentTime;
+                } else {
+                    node->active_end_time = currentTime;
                 }
             }
 
 
-            if (currentTime - fwdNode->flow_start_time > flowTimeout) {
+            if (currentTime - node->flow_start_time > flowTimeout) {
                 bpf_trace_printk("timeout");
                 // for analysis
-                flow_table.delete(&fwdFlowKey);
+                flow_table.delete(&flowKey);
             }
 
             if (ip->protocol == IPPROTO_TCP && (fin == 1 || rst == 1)) {
                 bpf_trace_printk("fin or rst");
                 // for analysis
-                flow_table.delete(&fwdFlowKey);
+                flow_table.delete(&flowKey);
             }
         }
 
-        if(backNode != NULL){
-            backNode->packet_num++;
-            backNode->total_packet_length += payload;
-            u64 currentIAT = currentTime - backNode->flow_last_time;
-            backNode->flow_last_time = currentTime;
-            backNode->min_IAT =
-                    backNode->min_IAT == 0 ? currentIAT : currentIAT < backNode->min_IAT ? currentIAT : backNode->min_IAT;
-            backNode->total_IAT += currentIAT;
-
-            backNode->total_bak_IAT += currentIAT;
-
-            if(currentTime - backNode->active_end_time > activityTimeout){
-                if(backNode->active_end_time > backNode->active_start_time){
-                    int currentActive = backNode->active_end_time - backNode->active_start_time;
-                    backNode->total_active_time += currentActive;
-                    backNode->min_active_time = backNode->min_active_time == 0 ? currentActive : currentActive < backNode->min_active_time ? currentActive : backNode->min_active_time;
-                    backNode->active_start_time  = backNode->active_end_time = currentTime;
-                }else {
-                    backNode->active_end_time = currentTime;
-                }
-            }
-
-            if (currentTime - backNode->flow_start_time > flowTimeout) {
-                bpf_trace_printk("timeout");
-                // for analysis
-                flow_table.delete(&backFlowKey);
-            }
-
-            if (ip->protocol == IPPROTO_TCP &&  (fin == 1 || rst == 1) ) {
-                bpf_trace_printk("fin or rst");
-                // for analysis
-                flow_table.delete(&backFlowKey);
-            }
-        }
     }
     return XDP_PASS;
 }

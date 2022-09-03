@@ -34,7 +34,6 @@ struct FLOW_KEY {
     u32 destinationTransportPort;
 };
 
-
 struct FLOW_FEATURE_NODE {
     u32 packet_num;
 
@@ -63,26 +62,7 @@ struct FLOW_FEATURE_NODE {
     u64 total_active_time;
 };
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  10000);
-BPF_HASH(packet_cnt, u8, u32
-);
-
-void static printIpAddress(__be32 ipAddress, bool sourceIp) {
-    unsigned int state0 = ipAddress >> 24;
-
-    unsigned int state1 = ipAddress << 8 >> 24;
-
-    unsigned int state2 = ipAddress << 16 >> 24;
-
-    unsigned int state3 = ipAddress << 24 >> 24;
-
-    if (sourceIp) {
-        bpf_trace_printk("src1:%u.%u", state3, state2);
-        bpf_trace_printk("src2:%u.%u", state1, state0);
-    } else {
-        bpf_trace_printk("des1:%u.%u", state3, state2);
-        bpf_trace_printk("des2:%u.%u", state1, state0);
-    }
-}
+BPF_HASH(packet_cnt, u8, u32 );
 
 
 int my_program(struct xdp_md *ctx) {
@@ -123,6 +103,7 @@ int my_program(struct xdp_md *ctx) {
             destinationTransportPort = uh->dest;
         }
 
+
         struct FLOW_KEY fwdFlowKey = {0, 0, 0, 0, 0, 0, 0};
         fwdFlowKey.protocolIdentifier = ip->protocol;
         fwdFlowKey.sourceIPAddress = ip->saddr;
@@ -150,21 +131,19 @@ int my_program(struct xdp_md *ctx) {
             flow_table.insert(&fwdFlowKey, &zero);
             return XDP_PASS;
         }
-//        printIpAddress(ip->saddr, true);
-//        printIpAddress(ip->daddr, false);
 
         if (fwdNode != NULL) {
             fwdNode->packet_num++;
             fwdNode->fwd_packet_num++;
             fwdNode->total_packet_length += payload;
-
             u64 currentIAT = currentTime - fwdNode->flow_last_time;
+            fwdNode->flow_last_time = currentTime;
+
             fwdNode->min_IAT =
                     fwdNode->min_IAT == 0 ? currentIAT : currentIAT < fwdNode->min_IAT ? currentIAT : fwdNode->min_IAT;
             fwdNode->total_IAT += currentIAT;
 
             fwdNode->min_fwd_IAT = fwdNode->min_fwd_IAT == 0 ? currentIAT : currentIAT < fwdNode->min_fwd_IAT ? currentIAT : fwdNode->min_fwd_IAT;
-//            bpf_trace_printk("packets:%u", fwdNode->packet_num);
 
             if(currentTime - fwdNode->active_end_time > activityTimeout){
                 if(fwdNode->active_end_time > fwdNode->active_start_time){
@@ -194,15 +173,13 @@ int my_program(struct xdp_md *ctx) {
         if(backNode != NULL){
             backNode->packet_num++;
             backNode->total_packet_length += payload;
-
             u64 currentIAT = currentTime - backNode->flow_last_time;
+            backNode->flow_last_time = currentTime;
             backNode->min_IAT =
                     backNode->min_IAT == 0 ? currentIAT : currentIAT < backNode->min_IAT ? currentIAT : backNode->min_IAT;
             backNode->total_IAT += currentIAT;
 
             backNode->total_bak_IAT += currentIAT;
-//            bpf_trace_printk("packets:%u", backNode->packet_num);
-
 
             if(currentTime - backNode->active_end_time > activityTimeout){
                 if(backNode->active_end_time > backNode->active_start_time){

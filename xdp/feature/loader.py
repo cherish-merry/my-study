@@ -3,6 +3,7 @@
 from bcc import BPF
 import time
 import numpy as np
+import ctypes as ct
 
 
 def addr2dec(addr):
@@ -20,20 +21,21 @@ feature = np.fromfile("./result/feature.bin", dtype=int)
 threshold = np.fromfile("./result/threshold.bin", dtype=int)
 value = np.fromfile("./result/value.bin", dtype=int)
 
-decide_tree_map = "BPF_ARRAY(child_left, int," + str(childrenLeft.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(child_right, int," + str(childrenRight.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(feature, int," + str(feature.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(threshold, int," + str(threshold.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(value, int," + str(value.shape[0]) + ");\n"
+decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(child_right, s32," + str(childrenRight.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(feature, s32," + str(feature.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(threshold, u64," + str(threshold.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n"
 
 with open('program.c', 'r', encoding='utf-8') as f:
     program = f.read()
 
 device = "enp3s0"
 # b = BPF(src_file="program.c")
-b = BPF(text=program + decide_tree_map)
+b = BPF(text=decide_tree_map + program)
 
 flow_table = b.get_table("flow_table")
+exception_table = b.get_table("exception_table")
 child_left_table = b.get_table("child_left")
 child_right_table = b.get_table("child_right")
 feature_table = b.get_table("feature")
@@ -41,6 +43,7 @@ threshold_table = b.get_table("threshold")
 value_table = b.get_table("value")
 
 for i in range(childrenLeft.shape[0]):
+    # child_left_table[i] = ct.c_int32(childrenLeft[i])
     child_left_table[i] = child_left_table.Leaf(childrenLeft[i])
 
 for i in range(childrenRight.shape[0]):
@@ -63,19 +66,33 @@ print("hit CTRL+C to stop")
 while 1:
     try:
         count = 0
-        for k, v in flow_table.items():
+        # for k, v in flow_table.items():
+        #     print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
+        #                                     dec2addr(k.destinationIPAddress), k.sourceTransportPort,
+        #                                     k.destinationTransportPort))
+        #     print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
+        #     print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
+        #           format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
+        #     print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
+        #     print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},totalActiveTime:{}'.
+        #           format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.totalActiveTime))
+
+        for k, v in exception_table.items():
             print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
                                             dec2addr(k.destinationIPAddress), k.sourceTransportPort,
                                             k.destinationTransportPort))
-            print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
-            print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
-                  format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
-            print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
-            print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},totalActiveTime:{}'.
-                  format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.totalActiveTime))
+
+            print("[Duration,Total Packets,Total Length,Length Max,Length Min,"
+                  "Length Mean,IAT Mean,IAT Max,IAT Min,IAT Total,Active Max,Active Min]")
+            print("[{},{},{},{},{},{},{},{},{},{},{},{}]".format
+                  (v.flowEndTime - v.flowStartTime, v.packetNum,
+                   v.totalPacketLength, v.maxPacketLength, v.minPacketLength,
+                   v.totalPacketLength / v.packetNum, v.totalIAT / (v.packetNum - 1),
+                   v.maxIAT, v.minIAT, v.totalIAT, v.maxActiveTime, v.minActiveTime
+                   ))
             count = count + 1
         print("count:", count)
-        time.sleep(5)
+        time.sleep(15)
     except KeyboardInterrupt:
         print("Removing filter from device")
         break

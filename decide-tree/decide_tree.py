@@ -120,13 +120,13 @@ def label(s):
 
 
 if __name__ == '__main__':
-    np.set_printoptions(threshold=np.inf)
-    pd.set_option('display.max_columns', None)  # 显示完整的列
-    pd.set_option('display.max_rows', None)  # 显示完整的行
+    # np.set_printoptions(threshold=np.inf)
+    # pd.set_option('display.max_columns', None)  # 显示完整的列
+    # pd.set_option('display.max_rows', None)  # 显示完整的行
 
     data = pd.read_csv("Wednesday-workingHours.pcap_ISCX.csv"
                        , converters={" Label": label}, usecols=
-                       [1, 2, 7, 6, 8, 4, 19, 18, 16, 20, 73, 72, 70, 78])
+                       [1, 2, 7, 6, 8, 4, 19, 18, 16, 20, 73, 72, 78])
 
     columns = np.array(data.columns)
 
@@ -141,33 +141,32 @@ if __name__ == '__main__':
     x = array[:, :array.shape[1] - 1]
     y = array[:, array.shape[1] - 1]
 
-    print(x.shape)
-
-    class_names = ["Normal", "Exception"]
-
-    clf = tree.DecisionTreeClassifier(max_depth=10, max_leaf_nodes=100)
-    clf = clf.fit(x, y)
-
-    clf.tree_.child_left_map.tofile("./result/childLeft.bin")
-    clf.tree_.children_right.tofile("./result/childrenRight.bin")
-    clf.tree_.feature.tofile("./result/feature.bin")
-    clf.tree_.threshold.astype(int).tofile("./result/threshold.bin")
-    value = []
-    values = clf.tree_.value
-    for val in values:
-        value.append(np.argmax(val))
-    np.array(value).tofile("./result/value.bin")
-
-    print(np.fromfile("./result/childLeft.bin", dtype=int))
-    print(np.fromfile("./result/childrenRight.bin", dtype=int))
-    print(np.fromfile("./result/feature.bin", dtype=int))
-    print(np.fromfile("./result/threshold.bin", dtype=int))
-    print(np.fromfile("./result/value.bin", dtype=int))
-
-    dot_data = tree.export_graphviz(clf, out_file=None,
-                                    feature_names=columns[:columns.shape[0] - 1],
-                                    class_names=class_names,
-                                    filled=True, rounded=True,
-                                    special_characters=True)
-    graph = graphviz.Source(dot_data)
-    graph.render("./result/decide_tree")
+    print(x)
+    # class_names = ["Normal", "Exception"]
+    #
+    # clf = tree.DecisionTreeClassifier(max_depth=10, max_leaf_nodes=100)
+    # clf = clf.fit(x, y)
+    #
+    # clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
+    # clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
+    # clf.tree_.feature.tofile("../xdp/feature/result/feature.bin")
+    # clf.tree_.threshold.astype(int).tofile("../xdp/feature/result/threshold.bin")
+    # value = []
+    # values = clf.tree_.value
+    # for val in values:
+    #     value.append(np.argmax(val))
+    # np.array(value).tofile("../xdp/feature/result/value.bin")
+    #
+    # print(np.fromfile("../xdp/feature/result/childLeft.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/childrenRight.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/feature.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/threshold.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/value.bin", dtype=int))
+    #
+    # dot_data = tree.export_graphviz(clf, out_file=None,
+    #                                 feature_names=columns[:columns.shape[0] - 1],
+    #                                 class_names=class_names,
+    #                                 filled=True, rounded=True,
+    #                                 special_characters=True)
+    # graph = graphviz.Source(dot_data)
+    # graph.render("../xdp/feature/result/decide_tree")

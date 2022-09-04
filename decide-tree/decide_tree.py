@@ -148,17 +148,21 @@ if __name__ == '__main__':
     clf = tree.DecisionTreeClassifier(max_depth=10, max_leaf_nodes=100)
     clf = clf.fit(x, y)
 
-    np.savetxt("./result/childrenLeft", clf.tree_.children_left, fmt='%d')
-    np.savetxt("./result/childrenRight", clf.tree_.children_right, fmt='%d')
-
-    np.savetxt("./result/feature", clf.tree_.feature, fmt='%d')
-    np.savetxt("./result/threshold", clf.tree_.threshold, fmt='%d')
-
-    values = clf.tree_.value
+    clf.tree_.child_left_map.tofile("./result/childLeft.bin")
+    clf.tree_.children_right.tofile("./result/childrenRight.bin")
+    clf.tree_.feature.tofile("./result/feature.bin")
+    clf.tree_.threshold.astype(int).tofile("./result/threshold.bin")
     value = []
+    values = clf.tree_.value
     for val in values:
         value.append(np.argmax(val))
-    np.savetxt("./result/value", np.array(value), fmt='%d')
+    np.array(value).tofile("./result/value.bin")
+
+    print(np.fromfile("./result/childLeft.bin", dtype=int))
+    print(np.fromfile("./result/childrenRight.bin", dtype=int))
+    print(np.fromfile("./result/feature.bin", dtype=int))
+    print(np.fromfile("./result/threshold.bin", dtype=int))
+    print(np.fromfile("./result/value.bin", dtype=int))
 
     dot_data = tree.export_graphviz(clf, out_file=None,
                                     feature_names=columns[:columns.shape[0] - 1],

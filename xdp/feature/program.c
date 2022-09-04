@@ -69,6 +69,33 @@ BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  1
 BPF_HASH(packet_cnt, u8, u32
 );
 
+int static analysis(struct FLOW_FEATURE_NODE *fwdNode) {
+    // duration packetNum
+    // minPacketLength maxPacketLength meanPacketLength totalPacketLength
+    // minIAT maxIAT meanIAT  totalIAT
+    // minActiveTime maxActiveTime meanIAT totalActiveTime
+    u64 feature[12];
+    feature[0] = fwdNode->flowEndTime - fwdNode->flowStartTime;
+
+    feature[1] = fwdNode->packetNum;
+
+    feature[2] = fwdNode->minPacketLength;
+    feature[3] = fwdNode->maxPacketLength;
+    feature[4] = fwdNode->totalPacketLength / fwdNode->packetNum;
+    feature[5] = fwdNode->totalPacketLength;
+
+
+    feature[6] = fwdNode->minIAT;
+    feature[7] = fwdNode->maxIAT;
+    feature[8] = fwdNode->totalIAT / (fwdNode->packetNum - 1);
+    feature[9] = fwdNode->totalIAT;
+
+
+    feature[10] = fwdNode->minActiveTime;
+    feature[11] = fwdNode->maxActiveTime;
+    return 0;
+}
+
 
 int my_program(struct xdp_md *ctx) {
     u64 flowTimeout = 120000000;
@@ -164,13 +191,17 @@ int my_program(struct xdp_md *ctx) {
             bpf_trace_printk("timeout");
             // for analysis
             flow_table.delete(&fwdFlowKey);
+            analysis(fwdNode);
         }
 
         if (ip->protocol == IPPROTO_TCP && (fin == 1 || rst == 1)) {
             bpf_trace_printk("fin or rst");
             // for analysis
             flow_table.delete(&fwdFlowKey);
+            analysis(fwdNode);
         }
     }
     return XDP_PASS;
 }
+
+

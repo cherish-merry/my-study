@@ -9,6 +9,16 @@ from bcc.utils import printb
 #
 
 '''
+duration packetNum
+minPacketLength maxPacketLength meanPacketLength totalPacketLength
+minIAT maxIAT meanIAT  totalIAT
+minActiveTime maxActiveTime
+
+1 2 
+7 6 8 4
+19 18 16 20
+73 72 70 
+
 0 ' Destination Port'  +
 1 ' Flow Duration' +
 2 ' Total Fwd Packets' +
@@ -47,7 +57,12 @@ from bcc.utils import printb
 35 ' Bwd Header Length' 
 36 'Fwd Packets/s' 
 37 ' Bwd Packets/s'
-38 ' Min Packet Length' 
+38 ' Min Packet Length'     np.savetxt("./childrenLeft.txt", clf.tree_.children_left, fmt='%d')
+    np.savetxt("./childrenRight.txt", clf.tree_.children_right, fmt='%d')
+
+    np.savetxt("./feature.txt", clf.tree_.feature, fmt='%d')
+    np.savetxt("./threshold.txt", clf.tree_.threshold, fmt='%d')
+    np.savetxt("./value.txt", clf.tree_.value, fmt='%d')
 39 ' Max Packet Length' 
 40 ' Packet Length Mean'
 41 ' Packet Length Std' 
@@ -111,7 +126,7 @@ if __name__ == '__main__':
 
     data = pd.read_csv("Wednesday-workingHours.pcap_ISCX.csv"
                        , converters={" Label": label}, usecols=
-                       [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 43, 44])
+                       [1, 2, 7, 6, 8, 4, 19, 18, 16, 20, 73, 72, 70, 78])
 
     columns = np.array(data.columns)
 
@@ -130,8 +145,20 @@ if __name__ == '__main__':
 
     class_names = ["Normal", "Exception"]
 
-    clf = tree.DecisionTreeClassifier(max_depth=10, max_leaf_nodes=1000)
+    clf = tree.DecisionTreeClassifier(max_depth=10, max_leaf_nodes=100)
     clf = clf.fit(x, y)
+
+    np.savetxt("./result/childrenLeft", clf.tree_.children_left, fmt='%d')
+    np.savetxt("./result/childrenRight", clf.tree_.children_right, fmt='%d')
+
+    np.savetxt("./result/feature", clf.tree_.feature, fmt='%d')
+    np.savetxt("./result/threshold", clf.tree_.threshold, fmt='%d')
+
+    values = clf.tree_.value
+    value = []
+    for val in values:
+        value.append(np.argmax(val))
+    np.savetxt("./result/value", np.array(value), fmt='%d')
 
     dot_data = tree.export_graphviz(clf, out_file=None,
                                     feature_names=columns[:columns.shape[0] - 1],
@@ -139,4 +166,4 @@ if __name__ == '__main__':
                                     filled=True, rounded=True,
                                     special_characters=True)
     graph = graphviz.Source(dot_data)
-    graph.render("decide_tree")
+    graph.render("./result/decide_tree")

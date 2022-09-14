@@ -97,22 +97,27 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode) {
         u64 *threshold_val = threshold.lookup(&current_node);
 
         if (left_val == NULL || right_val == NULL || feature_val == NULL ||
-            threshold_val == NULL || *left_val == TREE_LEAF) {
+            threshold_val == NULL || *left_val == TREE_LEAF || *feature_val > sizeof(feature_vec) / sizeof(feature_vec[0]) || *feature_val >= FEATURE_VEC_LENGTH) {
             break;
         }
 
-        if (*feature_val > sizeof(feature_vec) / sizeof(feature_vec[0])) break;
+        u64 a = feature_vec[*feature_val];
 
-        if (*feature_val >= FEATURE_VEC_LENGTH) break;
-
-        if (feature_vec[*feature_val] <= *threshold_val) current_node = *left_val;
+        if (a <= *threshold_val) current_node = *left_val;
         else current_node = *right_val;
+
+
+        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu",*feature_val,*threshold_val,a);
     }
 
     u32 * value_val = value.lookup(&current_node);
-    u32 res = value_val == NULL ? 0 : *value_val;
-    if(res == 1) bpf_trace_printk("exception flow");
-    return res;
+
+    if(value_val == NULL) return 0;
+
+//    bpf_trace_printk("current_node:%u, value:%lu",current_node,*value_val);
+//
+//    bpf_trace_printk("exception flow");
+    return *value_val;
 }
 
 

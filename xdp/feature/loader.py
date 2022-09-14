@@ -66,16 +66,17 @@ print("hit CTRL+C to stop")
 while 1:
     try:
         count = 0
-        # for k, v in flow_table.items():
-        #     print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
-        #                                     dec2addr(k.destinationIPAddress), k.sourceTransportPort,
-        #                                     k.destinationTransportPort))
-        #     print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
-        #     print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
-        #           format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
-        #     print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
-        #     print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},totalActiveTime:{}'.
-        #           format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.totalActiveTime))
+        for k, v in flow_table.items():
+            if dec2addr(k.sourceIPAddress) == "192.168.1.115":
+                print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
+                                                dec2addr(k.destinationIPAddress), k.sourceTransportPort,
+                                                k.destinationTransportPort))
+                print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
+                print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
+                      format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
+                print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
+                print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},totalActiveTime:{}'.
+                      format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.totalActiveTime))
 
         for k, v in exception_table.items():
             print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
@@ -92,9 +93,22 @@ while 1:
                    ))
             count = count + 1
         print("count:", count)
-        time.sleep(15)
+        time.sleep(30)
     except KeyboardInterrupt:
         print("Removing filter from device")
         break
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 b.remove_xdp(device, 0)

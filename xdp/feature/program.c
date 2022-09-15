@@ -5,9 +5,9 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
-#define MAX_TREE_DEPTH  10
+#define MAX_TREE_DEPTH  24
 #define TREE_LEAF -1
-#define FEATURE_VEC_LENGTH 12
+#define FEATURE_VEC_LENGTH 22
 
 struct FLOW_KEY {
     u8 protocolIdentifier;
@@ -20,6 +20,20 @@ struct FLOW_KEY {
 };
 
 struct FLOW_FEATURE_NODE {
+    u32 protocol;
+
+    u32 FIN;
+
+    u32 SYN;
+
+    u32 RST;
+
+    u32 PSH;
+
+    u32 ACK;
+
+    u32 WIN;
+
     u32 packetNum;
 
     u32 minPacketLength;
@@ -46,7 +60,9 @@ struct FLOW_FEATURE_NODE {
 
     u64 maxActiveTime;
 
-    u64 totalActiveTime;
+    u64 minIdle;
+
+    u64 maxIdle;
 };
 
 
@@ -56,38 +72,51 @@ BPF_HASH(packet_cnt, u8, u32
 );
 
 u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode) {
-    /*
-    [' Flow Duration' ' Total Fwd Packets' 'Total Length of Fwd Packets'
- ' Fwd Packet Length Max' ' Fwd Packet Length Min'
- ' Fwd Packet Length Mean' ' Flow IAT Mean' ' Flow IAT Max'
- ' Flow IAT Min' 'Fwd IAT Total' ' Active Max' ' Active Min' ' Label']
-    */
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
-    feature_vec[0] = fwdNode->flowEndTime - fwdNode->flowStartTime;
+    feature_vec[0] = fwdNode->protocol;
 
-    feature_vec[1] = fwdNode->packetNum;
+    feature_vec[1] = fwdNode->flowEndTime - fwdNode->flowStartTime;
 
-    feature_vec[2] = fwdNode->totalPacketLength;
+    feature_vec[2] = fwdNode->packetNum;
 
-    feature_vec[3] = fwdNode->maxPacketLength;
+    feature_vec[3] = fwdNode->totalPacketLength;
 
-    feature_vec[4] = fwdNode->minPacketLength;
+    feature_vec[4] = fwdNode->maxPacketLength;
 
-    feature_vec[5] = fwdNode->totalPacketLength / fwdNode->packetNum;
+    feature_vec[5] = fwdNode->minPacketLength;
 
-    feature_vec[6] = fwdNode->totalIAT / (fwdNode->packetNum - 1);
+    feature_vec[6] = fwdNode->totalPacketLength / fwdNode->packetNum;
 
-    feature_vec[7] = fwdNode->maxIAT;
+    feature_vec[7] = fwdNode->totalPacketLength / (feature_vec[1] / 1000000);
 
-    feature_vec[8] = fwdNode->minIAT;
+    feature_vec[8] = fwdNode->packetNum / (feature_vec[1] / 1000000);
 
-    feature_vec[9] = fwdNode->totalIAT;
+    feature_vec[9] = fwdNode->totalIAT / (fwdNode->packetNum - 1);
 
-    feature_vec[10] = fwdNode->maxActiveTime;
+    feature_vec[10] = fwdNode->maxIAT;
 
-    feature_vec[11] = fwdNode->minActiveTime;
+    feature_vec[11] = fwdNode->minIAT;
 
+    feature_vec[12] = fwdNode->FIN;
+
+    feature_vec[13] = fwdNode->SYN;
+
+    feature_vec[14] = fwdNode->RST;
+
+    feature_vec[15] = fwdNode->PSH;
+
+    feature_vec[16] = fwdNode->ACK;
+
+    feature_vec[17] = fwdNode->WIN;
+
+    feature_vec[18] = fwdNode->maxActiveTime;
+
+    feature_vec[19] = fwdNode->minActiveTime;
+
+    feature_vec[20] = fwdNode->maxIdle;
+
+    feature_vec[21] = fwdNode->minIdle;
 
     u32 current_node = 0;
     for (int i = 0; i < MAX_TREE_DEPTH; i++) {
@@ -97,7 +126,8 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode) {
         u64 *threshold_val = threshold.lookup(&current_node);
 
         if (left_val == NULL || right_val == NULL || feature_val == NULL ||
-            threshold_val == NULL || *left_val == TREE_LEAF || *feature_val > sizeof(feature_vec) / sizeof(feature_vec[0]) || *feature_val >= FEATURE_VEC_LENGTH) {
+            threshold_val == NULL || *left_val == TREE_LEAF ||
+            *feature_val > sizeof(feature_vec) / sizeof(feature_vec[0]) || *feature_val >= FEATURE_VEC_LENGTH) {
             break;
         }
 
@@ -107,16 +137,12 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode) {
         else current_node = *right_val;
 
 
-        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu",*feature_val,*threshold_val,a);
+        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
     }
 
     u32 * value_val = value.lookup(&current_node);
 
-    if(value_val == NULL) return 0;
-
-//    bpf_trace_printk("current_node:%u, value:%lu",current_node,*value_val);
-//
-//    bpf_trace_printk("exception flow");
+    if (value_val == NULL) return 0;
     return *value_val;
 }
 
@@ -138,23 +164,28 @@ int my_program(struct xdp_md *ctx) {
 
     if (ip->protocol == IPPROTO_TCP || ip->protocol == IPPROTO_UDP) {
         u32 payload, sourceTransportPort, destinationTransportPort;
-        u16 fin, rst;
+        u16 fin, syn, rst, psh, ack, win;
         if (ip->protocol == IPPROTO_TCP) {
             th = (struct tcphdr *) (ip + 1);
             if ((void *) (th + 1) > data_end) {
                 return XDP_DROP;
             }
-            payload = data_end - data - sizeof ip - sizeof th;
+            payload = data_end - (void *) (long) (th + 1);
+
             sourceTransportPort = th->source;
             destinationTransportPort = th->dest;
             fin = th->fin;
+            syn = th->syn;
+            psh = th->psh;
             rst = th->rst;
+            ack = th->ack;
+            win = th->window;
         } else {
             uh = (struct udphdr *) (ip + 1);
             if ((void *) (uh + 1) > data_end) {
                 return XDP_DROP;
             }
-            payload = data_end - data - sizeof ip - sizeof uh;
+            payload = data_end - (void *) (long) (uh + 1);
             sourceTransportPort = uh->source;
             destinationTransportPort = uh->dest;
         }
@@ -172,11 +203,23 @@ int my_program(struct xdp_md *ctx) {
 
         if (fwdNode == NULL) {
             struct FLOW_FEATURE_NODE zero = {};
+            if (ip->protocol == IPPROTO_TCP) {
+                zero.WIN = win;
+            }
+            zero.protocol = ip->protocol;
             zero.packetNum = 1;
             zero.minPacketLength = zero.maxPacketLength = zero.totalPacketLength = payload;
             zero.flowStartTime = zero.flowEndTime = zero.activeStartTime = zero.activeEndTime = currentTime;
             flow_table.insert(&fwdFlowKey, &zero);
             return XDP_PASS;
+        }
+
+        if (ip->protocol == IPPROTO_TCP) {
+            fwdNode->FIN += fin;
+            fwdNode->SYN += syn;
+            fwdNode->RST += rst;
+            fwdNode->PSH += psh;
+            fwdNode->ACK += ack;
         }
 
         fwdNode->packetNum++;
@@ -199,12 +242,18 @@ int my_program(struct xdp_md *ctx) {
 //            bpf_trace_printk("active timeout");
             if (fwdNode->activeEndTime > fwdNode->activeStartTime) {
                 int currentActive = fwdNode->activeEndTime - fwdNode->activeStartTime;
-                fwdNode->totalActiveTime += currentActive;
                 fwdNode->minActiveTime =
                         fwdNode->minActiveTime == 0 ? currentActive : currentActive < fwdNode->minActiveTime
                                                                       ? currentActive : fwdNode->minActiveTime;
                 fwdNode->maxActiveTime =
                         currentActive > fwdNode->maxActiveTime ? currentActive : fwdNode->maxActiveTime;
+
+                int currentIdle = currentTime - fwdNode->activeEndTime;
+
+                fwdNode->minIdle = fwdNode->minIdle == 0 ? currentIdle : currentIdle < fwdNode->minIdle ? currentIdle
+                                                                                                        : fwdNode->minIdle;
+                fwdNode->maxIdle = fwdNode->maxIdle == 0 ? currentIdle : currentIdle > fwdNode->maxIdle ? currentIdle
+                                                                                                        : fwdNode->maxIdle;
                 fwdNode->activeStartTime = fwdNode->activeEndTime = currentTime;
             }
         } else {

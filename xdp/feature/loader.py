@@ -65,7 +65,7 @@ print("hit CTRL+C to stop")
 
 while 1:
     try:
-        count = 0
+        exceptions = 0
         for k, v in flow_table.items():
             if dec2addr(k.sourceIPAddress) == "192.168.1.115":
                 print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
@@ -75,40 +75,30 @@ while 1:
                 print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
                       format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
                 print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
-                print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},totalActiveTime:{}'.
-                      format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.totalActiveTime))
-
-        for k, v in exception_table.items():
-            print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
-                                            dec2addr(k.destinationIPAddress), k.sourceTransportPort,
-                                            k.destinationTransportPort))
-
-            print("[Duration,Total Packets,Total Length,Length Max,Length Min,"
-                  "Length Mean,IAT Mean,IAT Max,IAT Min,IAT Total,Active Max,Active Min]")
-            print("[{},{},{},{},{},{},{},{},{},{},{},{}]".format
-                  (v.flowEndTime - v.flowStartTime, v.packetNum,
-                   v.totalPacketLength, v.maxPacketLength, v.minPacketLength,
-                   v.totalPacketLength / v.packetNum, v.totalIAT / (v.packetNum - 1),
-                   v.maxIAT, v.minIAT, v.totalIAT, v.maxActiveTime, v.minActiveTime
-                   ))
-            count = count + 1
-        print("count:", count)
+                print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},minIdle:{},maxIdle:{}'.
+                      format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.minIdle,
+                             v.maxIdle))
+                print('FIN:{},SYN:{},RST:{},PSH:{},ACK:{},WIN:{}'.format(v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN))
+        # for k, v in exception_table.items():
+        #     print("exceptions:", exceptions)
+        #     print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
+        #                                     dec2addr(k.destinationIPAddress), k.sourceTransportPort,
+        #                                     k.destinationTransportPort))
+        #     print("[protocol,duration,packetNum,totalPacketLength,maxPacketLength,minPacketLength,"
+        #           "meanPacketLength,flow bytes/s,flow packets/s,meanIAT,maxIAT,minIAT,"
+        #           "FIN,SYN,RST,PSH,ACK,WIN,maxActive,minActive,maxIdle,minIdle]")
+        #     print("[{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]".format
+        #           (v.protocol, v.flowEndTime - v.flowStartTime, v.packetNum,
+        #            v.totalPacketLength, v.maxPacketLength, v.minPacketLength,
+        #            v.totalPacketLength / v.packetNum,
+        #            v.totalPacketLength / ((v.flowEndTime - v.flowStartTime) / 1000000),
+        #            v.packetNum / ((v.flowEndTime - v.flowStartTime) / 1000000), v.totalIAT / (v.packetNum - 1),
+        #            v.maxIAT, v.minIAT, v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN, v.maxActiveTime, v.minActiveTime,
+        #            v.maxIdle, v.minIdle))
+        #     exceptions = exceptions + 1
         time.sleep(30)
     except KeyboardInterrupt:
         print("Removing filter from device")
         break
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 b.remove_xdp(device, 0)

@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn import tree
 import graphviz
-from bcc.utils import printb
+import sys
+from sklearn.metrics import accuracy_score
 
 # sudo cat /sys/kernel/debug/tracing/trace_pipe
 '''
@@ -15,16 +16,17 @@ minActiveTime maxActiveTime
 [7, 8, 10, 12, 13, 14, 22, 24, 25, 26, 77, 78, 83]
 
 version2.0
+protocol
 duration  packetNum  totalPacketLength
 maxPacketLength minPacketLength meanPacketLength
 flow bytes/s  flow packets/s
 meanIAT maxIAT minIAT
 FIN SYN RST PSH ACK 
 Init Win Bytes
-meanActive maxActive minActive
-meanIdle maxIdle minIdle
+maxActive minActive
+maxIdle minIdle
 
-[7, 8, 10, 12, 13, 14, 20, 21, 22, 24, 25, 49, 50, 51, 52, 53, 71, 75, 77, 78, 79, 81, 82]
+[5, 7, 8, 10, 12, 13, 14, 20, 21, 22, 24, 25, 49, 50, 51, 52, 53, 71, 77, 78, 81, 82]
 '''
 
 
@@ -40,28 +42,32 @@ if __name__ == '__main__':
     # pd.set_option('display.max_columns', None)  # 显示完整的列
     # pd.set_option('display.max_rows', None)  # 显示完整的行
 
-    data = pd.read_csv("wednesday.pcap_Flow.csv",
+    data = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/wednesday/csv/wednesday.csv",
                        converters={"Label": label},
-                       usecols=[7, 8, 10, 12, 13, 14, 20, 21, 22, 24, 25, 49, 50, 51, 52, 53, 71, 75, 77, 78, 79, 81,
-                                82, 83])
+                       usecols=range(4, 37))
 
-    columns = np.array(data.columns)
+    train_data = data.sample(frac=0.6, random_state=0, axis=0)
+
+    test_data = data[~data.index.isin(train_data.index)].sample(frac=1, random_state=0, axis=0)
+
+    # train
+    columns = np.array(train_data.columns)
 
     print(columns)
 
-    array = np.array(data)
+    train_array = np.array(train_data)
 
-    array[np.isnan(array)] = 0
+    train_array[np.isnan(train_array)] = 0
 
-    array[np.isinf(array)] = 0
+    train_array[np.isinf(train_array)] = sys.maxsize
 
-    x = array[:, :array.shape[1] - 1]
-    y = array[:, array.shape[1] - 1]
+    train_x = train_array[:, :train_array.shape[1] - 1]
+    train_y = train_array[:, train_array.shape[1] - 1]
 
     class_names = ["Normal", "Exception"]
 
-    clf = tree.DecisionTreeClassifier(max_depth=24, max_leaf_nodes=1024)
-    clf = clf.fit(x, y)
+    clf = tree.DecisionTreeClassifier(max_depth=8, max_leaf_nodes=64)
+    clf = clf.fit(train_x, train_y)
 
     clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
     clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
@@ -86,3 +92,17 @@ if __name__ == '__main__':
                                     special_characters=True)
     graph = graphviz.Source(dot_data)
     graph.render("../xdp/feature/result/decide_tree")
+
+    # predict
+    test_array = np.array(test_data)
+
+    test_array[np.isnan(test_array)] = 0
+
+    test_array[np.isinf(test_array)] = sys.maxsize
+
+    test_x = test_array[:, :test_array.shape[1] - 1]
+    test_y = test_array[:, test_array.shape[1] - 1]
+
+    predict_y = clf.predict(test_x)
+
+    print(accuracy_score(test_y, predict_y))

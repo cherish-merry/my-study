@@ -84,9 +84,10 @@ struct FLOW_FEATURE_NODE {
 
 struct PACKET_INFO {
     struct FLOW_KEY flowKey;
-    u32 payload, sourceTransportPort, destinationTransportPort;
-    u8 protocol,fin, syn, rst, psh, ack, urg, cwr, ece;
+    u32 payload;
+    u8 fin, syn, rst, psh, ack, urg, cwr, ece;
     u16 win;
+    u64 currentTime;
 };
 
 static u64 flowTimeout = 120000000;
@@ -216,16 +217,16 @@ void static endActiveIdleTime(u64 currentTime, struct FLOW_FEATURE_NODE *fwdNode
     }
 }
 
-void static addFirstPacket(u64 currentTime, struct FLOW_KEY fwdFlowKey) {
+void static addFirstPacket(struct PACKET_INFO packetInfo) {
     struct FLOW_FEATURE_NODE zero = {};
     if (ip->protocol == IPPROTO_TCP) {
-        zero.WIN = win;
+        zero.WIN = packetInfo.win;
     }
-    zero.protocol = ip->protocol;
+    zero.protocol = packetInfo.flowKey.protocolIdentifier;
     zero.packetNum = 1;
-    zero.minPacketLength = zero.maxPacketLength = zero.totalPacketLength = payload;
-    zero.flowStartTime = zero.flowEndTime = zero.activeStartTime = zero.activeEndTime = currentTime;
-    flow_table.insert(&fwdFlowKey, &zero);
+    zero.minPacketLength = zero.maxPacketLength = zero.totalPacketLength = packetInfo.payload;
+    zero.flowStartTime = zero.flowEndTime = zero.activeStartTime = zero.activeEndTime = packetInfo.currentTime;
+    flow_table.insert(&packetInfo.flowKey, &zero);
 }
 
 int my_program(struct xdp_md *ctx) {
@@ -241,56 +242,55 @@ int my_program(struct xdp_md *ctx) {
         return XDP_DROP;
     }
 
-    struct PACKET_INFO packetInfo = {};
-
     if (ip->protocol == IPPROTO_TCP || ip->protocol == IPPROTO_UDP) {
-        u32 payload, sourceTransportPort, destinationTransportPort;
-        u8 fin, syn, rst, psh, ack, urg, cwr, ece;
-        u16 win;
+        u8 protocol;
+        u32 sourceTransportPort, destinationTransportPort;
+        struct PACKET_INFO packetInfo = {};
         if (ip->protocol == IPPROTO_TCP) {
             th = (struct tcphdr *) (ip + 1);
             if ((void *) (th + 1) > data_end) {
                 return XDP_DROP;
             }
-            payload = data_end - (void *) (long) (th + 1);
-
+            protocol = IPPROTO_TCP;
+            packetInfo.payload = data_end - (void *) (long) (th + 1);
             sourceTransportPort = th->source;
             destinationTransportPort = th->dest;
-            fin = th->fin;
-            syn = th->syn;
-            psh = th->psh;
-            rst = th->rst;
-            ack = th->ack;
-            urg = th->urg;
-            cwr = th->cwr;
-            ece = th->ece;
-            win = th->window;
+            packetInfo.fin = th->fin;
+            packetInfo.syn = th->syn;
+            packetInfo.psh = th->psh;
+            packetInfo.rst = th->rst;
+            packetInfo.ack = th->ack;
+            packetInfo.urg = th->urg;
+            packetInfo.cwr = th->cwr;
+            packetInfo.ece = th->ece;
+            packetInfo.win = th->window;
         } else {
             uh = (struct udphdr *) (ip + 1);
             if ((void *) (uh + 1) > data_end) {
                 return XDP_DROP;
             }
-            payload = data_end - (void *) (long) (uh + 1);
+            protocol = IPPROTO_UDP;
+            packetInfo.payload = data_end - (void *) (long) (uh + 1);
             sourceTransportPort = uh->source;
             destinationTransportPort = uh->dest;
         }
 
         struct FLOW_KEY fwdFlowKey = {0, 0, 0, 0, 0, 0, 0};
-        fwdFlowKey.protocolIdentifier = ip->protocol;
+        fwdFlowKey.protocolIdentifier = protocol;
         fwdFlowKey.sourceIPAddress = ip->saddr;
         fwdFlowKey.destinationIPAddress = ip->daddr;
         fwdFlowKey.sourceTransportPort = sourceTransportPort;
         fwdFlowKey.destinationTransportPort = destinationTransportPort;
 
-        struct FLOW_FEATURE_NODE *fwdNode = flow_table.lookup(&fwdFlowKey);
+        packetInfo.flowKey = fwdFlowKey;
+        packetInfo.currentTime = bpf_ktime_get_ns() / 1000;
 
-        u64 currentTime = bpf_ktime_get_ns() / 1000;
+        struct FLOW_FEATURE_NODE *fwdNode = flow_table.lookup(&fwdFlowKey);
 
         if (fwdNode == NULL) {
             addFirstPacket(currentTime, fwdFlowKey);
             return XDP_PASS;
         }
-
 
         if (currentTime - fwdNode->flowStartTime > flowTimeout) {
             //analysis

@@ -5,31 +5,8 @@ import graphviz
 import sys
 from sklearn.metrics import accuracy_score
 
+
 # sudo cat /sys/kernel/debug/tracing/trace_pipe
-'''
-version1.0
-duration packetNum
-minPacketLength maxPacketLength meanPacketLength totalPacketLength
-minIAT maxIAT meanIAT  totalIAT
-minActiveTime maxActiveTime
-
-[7, 8, 10, 12, 13, 14, 22, 24, 25, 26, 77, 78, 83]
-
-version2.0
-protocol
-duration  packetNum  totalPacketLength
-maxPacketLength minPacketLength meanPacketLength
-flow bytes/s  flow packets/s
-meanIAT maxIAT minIAT
-FIN SYN RST PSH ACK 
-Init Win Bytes
-maxActive minActive
-maxIdle minIdle
-
-[5, 7, 8, 10, 12, 13, 14, 20, 21, 22, 24, 25, 49, 50, 51, 52, 53, 71, 77, 78, 81, 82]
-'''
-
-
 def label(s):
     if s == "Normal":
         return 0

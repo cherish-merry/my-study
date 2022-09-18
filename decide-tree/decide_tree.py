@@ -4,6 +4,10 @@ from sklearn import tree
 import graphviz
 import sys
 from sklearn.metrics import accuracy_score
+import matplotlib
+
+matplotlib.use('qtagg')
+import matplotlib.pyplot as plt
 
 
 # sudo cat /sys/kernel/debug/tracing/trace_pipe
@@ -19,9 +23,11 @@ if __name__ == '__main__':
     # pd.set_option('display.max_columns', None)  # 显示完整的列
     # pd.set_option('display.max_rows', None)  # 显示完整的行
 
-    data = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/wednesday/csv/wednesday.csv",
+    data = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all.csv",
                        converters={"Label": label},
                        usecols=range(4, 37))
+
+    print(data.shape)
 
     train_data = data.sample(frac=0.6, random_state=0, axis=0)
 
@@ -43,7 +49,7 @@ if __name__ == '__main__':
 
     class_names = ["Normal", "Exception"]
 
-    clf = tree.DecisionTreeClassifier(max_depth=8, max_leaf_nodes=64)
+    clf = tree.DecisionTreeClassifier(max_depth=12, max_leaf_nodes=96, min_samples_leaf=10, min_samples_split=20)
     clf = clf.fit(train_x, train_y)
 
     clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
@@ -83,3 +89,18 @@ if __name__ == '__main__':
     predict_y = clf.predict(test_x)
 
     print(accuracy_score(test_y, predict_y))
+
+    # test = []
+    # for i in range(20):
+    #     clf = tree.DecisionTreeClassifier(max_depth=12
+    #                                       , criterion="entropy"
+    #                                       , random_state=30
+    #                                       , splitter="random", max_leaf_nodes=16 * (i + 1), min_samples_leaf=10,
+    #                                       min_samples_split=20
+    #                                       )
+    #     clf = clf.fit(train_x, train_y)
+    #     score = clf.score(test_x, test_y)
+    #     test.append(score)
+    # plt.plot(range(1, 21), test, color="red", label="max_depth")
+    # plt.legend()
+    # plt.show()

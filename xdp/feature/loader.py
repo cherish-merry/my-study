@@ -41,6 +41,7 @@ child_right_table = b.get_table("child_right")
 feature_table = b.get_table("feature")
 threshold_table = b.get_table("threshold")
 value_table = b.get_table("value")
+statistic_table = b.get_table("statistic")
 
 for i in range(childrenLeft.shape[0]):
     # child_left_table[i] = ct.c_int32(childrenLeft[i])
@@ -65,38 +66,49 @@ print("hit CTRL+C to stop")
 
 while 1:
     try:
-        exceptions = 0
-        for k, v in flow_table.items():
-            if dec2addr(k.sourceIPAddress) == "192.168.1.115":
-                print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
-                                                dec2addr(k.destinationIPAddress), k.sourceTransportPort,
-                                                k.destinationTransportPort))
-                print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
-                print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
-                      format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
-                print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
-                print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},minIdle:{},maxIdle:{}'.
-                      format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.minIdle,
-                             v.maxIdle))
-                print('FIN:{},SYN:{},RST:{},PSH:{},ACK:{},WIN:{}'.format(v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN))
-        # for k, v in exception_table.items():
-        #     print("exceptions:", exceptions)
+        for k in statistic_table.keys():
+            val = statistic_table.sum(k).value
+            i = k.value
+            if i == 0:
+                print("processed_packet:", val)
+            if i == 1:
+                print("tcp_udp:", val)
+            if i == 2:
+                print("flow:", val)
+            if i == 3:
+                print("flow_end:", val)
+            if i == 4:
+                print("exception:", val)
+        # for k, v in flow_table.items():
+        #     # if dec2addr(k.sourceIPAddress) == "192.168.1.115":
         #     print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
         #                                     dec2addr(k.destinationIPAddress), k.sourceTransportPort,
         #                                     k.destinationTransportPort))
-        #     print("[protocol,duration,packetNum,totalPacketLength,maxPacketLength,minPacketLength,"
-        #           "meanPacketLength,flow bytes/s,flow packets/s,meanIAT,maxIAT,minIAT,"
-        #           "FIN,SYN,RST,PSH,ACK,WIN,maxActive,minActive,maxIdle,minIdle]")
-        #     print("[{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]".format
-        #           (v.protocol, v.flowEndTime - v.flowStartTime, v.packetNum,
-        #            v.totalPacketLength, v.maxPacketLength, v.minPacketLength,
-        #            v.totalPacketLength / v.packetNum,
-        #            v.totalPacketLength / ((v.flowEndTime - v.flowStartTime) / 1000000),
-        #            v.packetNum / ((v.flowEndTime - v.flowStartTime) / 1000000), v.totalIAT / (v.packetNum - 1),
-        #            v.maxIAT, v.minIAT, v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN, v.maxActiveTime, v.minActiveTime,
-        #            v.maxIdle, v.minIdle))
-        #     exceptions = exceptions + 1
-        time.sleep(30)
+        #     print('flowStartTime:{},flowEndTime:{}'.format(v.flowStartTime, v.flowEndTime))
+        #     print('packetNum:{},minPacketLength:{},maxPacketLength:{},totalPacketLength:{}'.
+        #           format(v.packetNum, v.minPacketLength, v.maxPacketLength, v.totalPacketLength))
+        #     print('minIAT:{},maxIAT:{},totalIAT:{}'.format(v.minIAT, v.maxIAT, v.totalIAT))
+        #     print('activeStartTime:{},activeEndTime:{},minActiveTime:{},maxActiveTime:{},minIdle:{},maxIdle:{}'.
+        #           format(v.activeStartTime, v.activeEndTime, v.minActiveTime, v.maxActiveTime, v.minIdle,
+        #                  v.maxIdle))
+        #     print('FIN:{},SYN:{},RST:{},PSH:{},ACK:{},WIN:{}'.format(v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN))
+
+        for k, v in exception_table.items():
+            print('({},{},{},{},{},:{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
+                                                dec2addr(k.destinationIPAddress), k.sourceTransportPort,
+                                                k.destinationTransportPort, v))
+            # print("[protocol,duration,packetNum,totalPacketLength,maxPacketLength,minPacketLength,"
+            #       "meanPacketLength,flow bytes/s,flow packets/s,meanIAT,maxIAT,minIAT,"
+            #       "FIN,SYN,RST,PSH,ACK,WIN,maxActive,minActive,maxIdle,minIdle]")
+            # print("[{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]".format
+            #       (v.protocol, v.flowEndTime - v.flowStartTime, v.packetNum,
+            #        v.totalPacketLength, v.maxPacketLength, v.minPacketLength,
+            #        v.totalPacketLength / v.packetNum,
+            #        v.totalPacketLength / ((v.flowEndTime - v.flowStartTime) / 1000000),
+            #        v.packetNum / ((v.flowEndTime - v.flowStartTime) / 1000000), v.totalIAT / (v.packetNum - 1),
+            #        v.maxIAT, v.minIAT, v.FIN, v.SYN, v.RST, v.PSH, v.ACK, v.WIN, v.maxActiveTime, v.minActiveTime,
+            #        v.maxIdle, v.minIdle))
+        time.sleep(1)
     except KeyboardInterrupt:
         print("Removing filter from device")
         break

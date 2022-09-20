@@ -25,11 +25,15 @@ if __name__ == '__main__':
 
     data = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all.csv",
                        converters={"Label": label},
-                       usecols=range(4, 37))
+                       usecols=range(5, 38))
 
     print(data.shape)
 
-    train_data = data.sample(frac=0.6, random_state=0, axis=0)
+    percentage = 0.0005
+
+    train_data = data.sample(frac=0.8, random_state=0, axis=0)
+
+    exceptions = train_data.Label.value_counts().values[1]
 
     test_data = data[~data.index.isin(train_data.index)].sample(frac=1, random_state=0, axis=0)
 
@@ -49,7 +53,9 @@ if __name__ == '__main__':
 
     class_names = ["Normal", "Exception"]
 
-    clf = tree.DecisionTreeClassifier(max_depth=12, max_leaf_nodes=96, min_samples_leaf=10, min_samples_split=20)
+    clf = tree.DecisionTreeClassifier(max_depth=12, max_leaf_nodes=80,
+                                      min_samples_leaf=int(exceptions * percentage),
+                                      min_samples_split=int(exceptions * percentage * 2))
     clf = clf.fit(train_x, train_y)
 
     clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
@@ -90,13 +96,16 @@ if __name__ == '__main__':
 
     print(accuracy_score(test_y, predict_y))
 
+    # 12 80
     # test = []
     # for i in range(20):
     #     clf = tree.DecisionTreeClassifier(max_depth=12
-    #                                       , criterion="entropy"
+    #                                       , criterion="entropy",
+    #                                       max_leaf_nodes=16 * (i + 1)
     #                                       , random_state=30
-    #                                       , splitter="random", max_leaf_nodes=16 * (i + 1), min_samples_leaf=10,
-    #                                       min_samples_split=20
+    #                                       , splitter="random",
+    #                                       min_samples_leaf=int(exceptions * percentage),
+    #                                       min_samples_split=int(int(exceptions * percentage * 2))
     #                                       )
     #     clf = clf.fit(train_x, train_y)
     #     score = clf.score(test_x, test_y)

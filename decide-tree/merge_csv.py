@@ -3,7 +3,7 @@ import os
 
 folder_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/day'
 res_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all'
-merge_name = 'monday.csv'
+merge_name = 'all.csv'
 
 file_list = os.listdir(folder_path)
 df = pd.read_csv(folder_path + "/" + file_list[0])

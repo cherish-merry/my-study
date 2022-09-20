@@ -5,7 +5,7 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
-#define MAX_TREE_DEPTH  10
+#define MAX_TREE_DEPTH  12
 #define TREE_LEAF -1
 #define FEATURE_VEC_LENGTH 32
 
@@ -106,6 +106,7 @@ static const char *feature_map[] = {"Protocol", "Flow Duration",
 
 
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  10000);
+BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, result_table,  10000);
 BPF_TABLE("lru_hash", struct FLOW_KEY,  u32 , exception_table,  10000);
 BPF_PERCPU_ARRAY(statistic, u32,
 5);
@@ -114,7 +115,7 @@ BPF_PERCPU_ARRAY(statistic, u32,
 u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKey) {
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
-    bpf_trace_printk("IP:%u", fwdFlowKey.sourceIPAddress);
+    bpf_trace_printk("IP:%llu", fwdFlowKey.sourceIPAddress);
 
     feature_vec[0] = fwdNode->protocol;
     bpf_trace_printk("Protocol:%llu", feature_vec[0]);
@@ -188,7 +189,7 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKe
     bpf_trace_printk("Active Mean:%llu", feature_vec[23]);
 
     feature_vec[24] = fwdNode->maxActiveTime - fwdNode->minActiveTime;
-    bpf_trace_printk("Active Extreme Deviation :%llu", feature_vec[24]);
+    bpf_trace_printk("Active Extreme Deviation:%llu", feature_vec[24]);
 
     feature_vec[25] = fwdNode->maxActiveTime;
     bpf_trace_printk("Active Max:%llu", feature_vec[25]);
@@ -425,14 +426,14 @@ int my_program(struct xdp_md *ctx) {
 
             //analysis
             fwdNode->endWay = 0;
-            if (analysis(fwdNode,fwdFlowKey) == 1) {
+            if (analysis(fwdNode, fwdFlowKey) == 1) {
                 u8 statistic_exception = 4;
                 statistic.increment(statistic_exception);
                 bpf_trace_printk("Label: Attack\n");
 
                 u32 one = 1;
-                u32 *val = exception_table.lookup(&fwdFlowKey);
-                if(val){
+                u32 * val = exception_table.lookup(&fwdFlowKey);
+                if (val) {
                     *val += 1;
                 } else exception_table.insert(&fwdFlowKey, &one);
             } else {
@@ -441,6 +442,10 @@ int my_program(struct xdp_md *ctx) {
 
             u8 statistic_flow_end = 3;
             statistic.increment(statistic_flow_end);
+
+            if (fwdFlowKey.sourceIPAddress == 1929488576) {
+                result_table.insert(&fwdFlowKey, fwdNode);
+            }
 
             //remove
             flow_table.delete(&fwdFlowKey);
@@ -458,25 +463,34 @@ int my_program(struct xdp_md *ctx) {
             // addPacket
             addPacket(packetInfo, fwdNode);
 
+            //endActiveIdleTime
+            endActiveIdleTime(packetInfo.currentTime, fwdNode);
 
 
             //analysis
             fwdNode->endWay = 1;
-            if (analysis(fwdNode,fwdFlowKey) == 1) {
+            if (analysis(fwdNode, fwdFlowKey) == 1) {
                 u8 statistic_exception = 4;
                 statistic.increment(statistic_exception);
                 bpf_trace_printk("Label: Attack\n");
                 u32 one = 1;
-                u32 *val = exception_table.lookup(&fwdFlowKey);
-                if(val){
+                u32 * val = exception_table.lookup(&fwdFlowKey);
+                if (val) {
                     *val += 1;
                 } else exception_table.insert(&fwdFlowKey, &one);
-            }else {
+            } else {
                 bpf_trace_printk("Label: Normal\n");
             }
 
             u8 statistic_flow_end = 3;
             statistic.increment(statistic_flow_end);
+
+            if (fwdFlowKey.sourceIPAddress == 1929488576) {
+                result_table.insert(&fwdFlowKey, fwdNode);
+            }
+
+
+
             //remove
             flow_table.delete(&fwdFlowKey);
 

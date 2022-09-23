@@ -113,6 +113,8 @@ BPF_PERCPU_ARRAY(statistic, u32,
 
 
 u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKey) {
+    if (fwdNode->flowEndTime - fwdNode->flowStartTime < 10) return 0;
+
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
     bpf_trace_printk("IP:%llu", fwdFlowKey.sourceIPAddress);
@@ -251,6 +253,7 @@ void static endActiveIdleTime(u64 currentTime, struct FLOW_FEATURE_NODE *fwdNode
 
         fwdNode->activeTotalTime += addTime;
         fwdNode->activePackets += 1;
+
     }
 
     if (currentTime - fwdNode->activeEndTime > activityTimeout) {
@@ -264,6 +267,7 @@ void static endActiveIdleTime(u64 currentTime, struct FLOW_FEATURE_NODE *fwdNode
 
         fwdNode->idleTotalTime += addTime;
         fwdNode->idlePackets += 1;
+        fwdNode->flowEndTime = currentTime;
     }
 }
 

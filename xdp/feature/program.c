@@ -5,7 +5,7 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
-#define MAX_TREE_DEPTH  12
+#define MAX_TREE_DEPTH  15
 #define TREE_LEAF -1
 #define FEATURE_VEC_LENGTH 32
 
@@ -90,8 +90,8 @@ struct PACKET_INFO {
     u64 currentTime;
 };
 
-static u64 flowTimeout = 120000000;
-static u64 activityTimeout = 5000000;
+static u64 flowTimeout = 15000000;
+static u64 activityTimeout = 1000000;
 static const char *feature_map[] = {"Protocol", "Flow Duration",
                                     "Total Packet", "Total Length of Packet",
                                     "Packet Length Max", "Packet Length Min",
@@ -139,7 +139,8 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKe
     feature_vec[6] = fwdNode->totalPacketLength / fwdNode->packetNum;
     bpf_trace_printk("Fwd Packet Length Mean:%llu", feature_vec[6]);
 
-    feature_vec[7] = fwdNode->maxPacketLength - fwdNode->minPacketLength;
+    feature_vec[7] = 100 * (fwdNode->maxPacketLength - fwdNode->minPacketLength) /
+                     (fwdNode->maxPacketLength + fwdNode->minPacketLength);
     bpf_trace_printk("Fwd Packet Length Extreme Deviation:%llu", feature_vec[7]);
 
     feature_vec[8] = fwdNode->totalPacketLength * 1000000 / feature_vec[1];
@@ -151,7 +152,7 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKe
     feature_vec[10] = fwdNode->totalIAT / (fwdNode->packetNum - 1);
     bpf_trace_printk("Fwd IAT Mean:%llu", feature_vec[10]);
 
-    feature_vec[11] = fwdNode->maxIAT - fwdNode->minIAT;
+    feature_vec[11] = 100 * (fwdNode->maxIAT - fwdNode->minIAT) / (fwdNode->maxIAT + fwdNode->minIAT);
     bpf_trace_printk("Fwd IAT Extreme Deviation:%llu", feature_vec[11]);
 
     feature_vec[12] = fwdNode->maxIAT;
@@ -190,7 +191,8 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKe
     feature_vec[23] = fwdNode->activeTotalTime / fwdNode->activePackets;
     bpf_trace_printk("Active Mean:%llu", feature_vec[23]);
 
-    feature_vec[24] = fwdNode->maxActiveTime - fwdNode->minActiveTime;
+    feature_vec[24] =
+            100 * (fwdNode->maxActiveTime - fwdNode->minActiveTime) / (fwdNode->maxActiveTime + fwdNode->minActiveTime);
     bpf_trace_printk("Active Extreme Deviation:%llu", feature_vec[24]);
 
     feature_vec[25] = fwdNode->maxActiveTime;
@@ -202,7 +204,7 @@ u32 static analysis(struct FLOW_FEATURE_NODE *fwdNode, struct FLOW_KEY fwdFlowKe
     feature_vec[27] = fwdNode->idleTotalTime / fwdNode->idlePackets;
     bpf_trace_printk("Idle Mean:%llu", feature_vec[27]);
 
-    feature_vec[28] = fwdNode->maxIdle - fwdNode->minIdle;
+    feature_vec[28] = 100 * (fwdNode->maxIdle - fwdNode->minIdle) / (fwdNode->maxIdle + fwdNode->minIdle);
     bpf_trace_printk("Idle Extreme Deviation:%llu", feature_vec[28]);
 
     feature_vec[29] = fwdNode->maxIdle;

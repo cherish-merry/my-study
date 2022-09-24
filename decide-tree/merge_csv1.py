@@ -1,9 +1,9 @@
 import pandas as pd
 import os
 
-folder_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/wednesday/csv'
-res_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/day'
-merge_name = 'wednesday.csv'
+folder_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/monday/csv/15s'
+res_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/15s/day'
+merge_name = 'monday.csv'
 
 file_list = os.listdir(folder_path)
 df = pd.read_csv(folder_path + "/" + file_list[0])

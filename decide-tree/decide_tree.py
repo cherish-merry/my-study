@@ -23,9 +23,9 @@ if __name__ == '__main__':
     # pd.set_option('display.max_columns', None)  # 显示完整的列
     # pd.set_option('display.max_rows', None)  # 显示完整的行
 
-    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all.csv",
+    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/15s/all/all.csv",
                      converters={"Label": label},
-                     usecols=range(5, 38))
+                     usecols=range(6, 39))
     print(df.shape)
 
     df = df.dropna()
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 
     print(df.shape)
 
-    df.to_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all_2.csv", encoding="utf_8_sig", index=False)
+    # df.to_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all_2.csv", encoding="utf_8_sig", index=False)
 
     columns = np.array(df.columns)
     print(columns)
@@ -52,11 +52,11 @@ if __name__ == '__main__':
     train_y = train_array[:, train_array.shape[1] - 1]
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.0005
+    percentage = 0.001
 
-    max_depth = 12
+    max_depth = 15
 
-    max_leaf_nodes = 80
+    max_leaf_nodes = 96
 
     min_samples_leaf = int(exceptions * percentage)
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     # 12 80
     # test = []
     # for i in range(20):
-    #     clf = tree.DecisionTreeClassifier(max_depth=12
+    #     clf = tree.DecisionTreeClassifier(max_depth=15
     #                                       , criterion="entropy",
     #                                       max_leaf_nodes=16 * (i + 1)
     #                                       , random_state=30

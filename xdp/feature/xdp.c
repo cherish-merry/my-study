@@ -7,7 +7,7 @@
 
 #define MAX_TREE_DEPTH  15
 #define TREE_LEAF -1
-#define FEATURE_VEC_LENGTH 32
+#define FEATURE_VEC_LENGTH 64
 
 struct FLOW_KEY {
     u8 protocolIdentifier;

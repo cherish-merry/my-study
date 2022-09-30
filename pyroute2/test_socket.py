@@ -1,21 +1,14 @@
-from pyroute2 import IPRoute
+'''
+    idx = 0;
+    actual_val = feature_vec.lookup(&idx);
+    bpf_trace_printk("Protocol:%llu", flow->protocol);
+    if (actual_val != NULL) *actual_val = flow->protocol;
+
+'''
 
 if __name__ == '__main__':
-    # create RTNL socket
-    ipr = IPRoute()
-
-    # subscribe to broadcast messages
-    ipr.bind()
-
-    # wait for data (do not parse it)
-    data = ipr.recv(65535)
-
-    # parse received data
-    messages = ipr.marshal.parse(data)
-
-    # shortcut: recv() + parse()
-    #
-    # (under the hood is much more, but for
-    # simplicity it's enough to say so)
-    #
-    messages = ipr.get()
+    for i in range(0, 64):
+        print("idx = {};".format(i))
+        print("actual_val = feature_vec.lookup(&idx);")
+        print('bpf_trace_printk("Protocol:%llu", flow->protocol);')
+        print("if (actual_val != NULL) *actual_val = flow->protocol;")

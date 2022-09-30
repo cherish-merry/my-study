@@ -3,7 +3,6 @@
 from bcc import BPF
 import time
 import numpy as np
-import ctypes as ct
 
 
 def addr2dec(addr):
@@ -27,7 +26,7 @@ decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ")
                   "BPF_ARRAY(threshold, u64," + str(threshold.shape[0]) + ");\n" + \
                   "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n"
 
-with open('program.c', 'r', encoding='utf-8') as f:
+with open('tc.c', 'r', encoding='utf-8') as f:
     program = f.read()
 
 device = "enp3s0"
@@ -60,8 +59,8 @@ for i in range(threshold.shape[0]):
 for i in range(value.shape[0]):
     value_table[i] = value_table.Leaf(value[i])
 
-fn = b.load_func("my_program", BPF.XDP)
-b.attach_xdp(device, fn, 0)
+fn = b.load_func("my_program", BPF.SOCKET_FILTER)
+b.attach_raw_socket(fn, device)
 
 print("hit CTRL+C to stop")
 
@@ -71,20 +70,27 @@ while 1:
             val = statistic_table.sum(k).value
             i = k.value
             if i == 0:
-                print("processed_packet:", val)
+                print("packet_num:", val)
             if i == 1:
-                print("tcp_udp:", val)
+                print("tcp:", val)
             if i == 2:
-                print("flow:", val)
+                print("udp:", val)
             if i == 3:
-                print("flow_end:", val)
+                print("flow:", val)
             if i == 4:
+                print("flow_timeout:", val)
+            if i == 5:
+                print("flow_fin:", val)
+            if i == 6:
+                print("flow_rst:", val)
+            if i == 7:
                 print("exception:", val)
-        # for k, v in result_table.items():
-        #     if dec2addr(k.sourceIPAddress) == "192.168.1.115":
-        #         print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
-        #                                         dec2addr(k.destinationIPAddress), k.sourceTransportPort,
-        #                                         k.destinationTransportPort))
+
+        # for k, v in flow_table.items():
+        # if dec2addr(k.src) == "115.1.168.192":
+        #     print('({},{},{},{},{})'.format(k.protocol, dec2addr(k.src),
+        #                                     dec2addr(k.dest), k.src_port,
+        #                                     k.dest_port))
         #         print("Protocol:", k.protocolIdentifier)
         #         print("Flow Duration:", v.flowEndTime - v.flowStartTime)
         #         print("Total Fwd Packet:", v.packetNum)
@@ -125,8 +131,8 @@ while 1:
         #         print("Idle Min:", v.minIdle)
         #         print("End Way:", v.endWay)
         time.sleep(1)
-        for k, v in exception_table.items():
-            print(dec2addr(k.sourceIPAddress), ":", v)
+        # for k, v in exception_table.items():
+        #     print(dec2addr(k.src), ":", v)
         print("----------------------------")
 
     except KeyboardInterrupt:

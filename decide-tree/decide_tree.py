@@ -5,6 +5,7 @@ import graphviz
 import sys
 from sklearn.metrics import accuracy_score
 import matplotlib
+import collections
 
 matplotlib.use('qtagg')
 import matplotlib.pyplot as plt
@@ -12,7 +13,7 @@ import matplotlib.pyplot as plt
 
 # sudo cat /sys/kernel/debug/tracing/trace_pipe
 def label(s):
-    if s == "Normal":
+    if s == "BENIGN":
         return 0
     else:
         return 1
@@ -23,18 +24,22 @@ if __name__ == '__main__':
     # pd.set_option('display.max_columns', None)  # 显示完整的列
     # pd.set_option('display.max_rows', None)  # 显示完整的行
 
-    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/15s/all/all.csv",
-                     converters={"Label": label},
-                     usecols=range(6, 39))
+    # usecols={1, 12, 13, 14, 15, 16, 27, 28, 29, 30, 31, 32, 33, 34, 35, 40, 41, 42, 43, 44, 45, 46}
+
+    #  usecols=range(7, 85)
+    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/Wednesday-WorkingHours.pcap_Flow.csv",
+                     converters={"Label": label}, usecols=range(6, 27)
+
+                     )
     print(df.shape)
 
     df = df.dropna()
 
     print(df.shape)
 
-    df = df.drop(df[df['Flow Duration'] < 10].index)
+    # df = df.drop(df[df[' Flow Duration'] < 10].index)
 
-    print(df.shape)
+    # print(df.shape)
 
     # df.to_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all_2.csv", encoding="utf_8_sig", index=False)
 
@@ -52,11 +57,11 @@ if __name__ == '__main__':
     train_y = train_array[:, train_array.shape[1] - 1]
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.001
+    percentage = 0.0005
 
-    max_depth = 15
+    max_depth = 24
 
-    max_leaf_nodes = 96
+    max_leaf_nodes = 144
 
     min_samples_leaf = int(exceptions * percentage)
 
@@ -70,6 +75,12 @@ if __name__ == '__main__':
                                       min_samples_leaf=min_samples_leaf,
                                       min_samples_split=min_samples_leaf * 2)
     clf = clf.fit(train_x, train_y)
+
+    print("\n\n feature")
+    counter = collections.Counter(clf.tree_.feature)
+    for key in counter:
+        if key > 0:
+            print(columns[key].strip())
 
     clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
     clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
@@ -109,10 +120,10 @@ if __name__ == '__main__':
 
     # 12 80
     # test = []
-    # for i in range(20):
-    #     clf = tree.DecisionTreeClassifier(max_depth=15
+    # for i in range(36):
+    #     clf = tree.DecisionTreeClassifier(max_depth=(i + 1)
     #                                       , criterion="entropy",
-    #                                       max_leaf_nodes=16 * (i + 1)
+    #                                       max_leaf_nodes=144
     #                                       , random_state=30
     #                                       , splitter="random",
     #                                       min_samples_leaf=int(exceptions * percentage),
@@ -121,6 +132,29 @@ if __name__ == '__main__':
     #     clf = clf.fit(train_x, train_y)
     #     score = clf.score(test_x, test_y)
     #     test.append(score)
-    # plt.plot(range(1, 21), test, color="red", label="max_depth")
+    # plt.plot(range(1, 37), test, color="red", label="max_depth")
     # plt.legend()
     # plt.show()
+
+'''
+Bwd Packet Length Mean
+Packet Length Mean
+Total Length of Bwd Packets
+Init_Win_bytes_backward
+Active Mean
+Fwd IAT Total
+Bwd Packets/s
+Fwd Packet Length Max
+URG Flag Count
+Total Backward Packets
+Init_Win_bytes_forward
+Idle Max
+Total Fwd Packets
+Flow IAT Min
+Fwd Packet Length Min
+Flow IAT Mean
+Total Length of Fwd Packets
+Flow Bytes/s
+SYN Flag Count
+Bwd IAT Min
+'''

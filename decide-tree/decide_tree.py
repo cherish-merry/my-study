@@ -24,11 +24,12 @@ if __name__ == '__main__':
     # pd.set_option('display.max_columns', None)  # 显示完整的列
     # pd.set_option('display.max_rows', None)  # 显示完整的行
 
+    # usecols = range(6, 27)
     # usecols={1, 12, 13, 14, 15, 16, 27, 28, 29, 30, 31, 32, 33, 34, 35, 40, 41, 42, 43, 44, 45, 46}
 
     #  usecols=range(7, 85)
-    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/Wednesday-WorkingHours.pcap_Flow.csv",
-                     converters={"Label": label}, usecols=range(6, 27)
+    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017/wednesday/csv/Wednesday-workingHours.csv",
+                     converters={"Label": label},
 
                      )
     print(df.shape)
@@ -73,7 +74,7 @@ if __name__ == '__main__':
 
     clf = tree.DecisionTreeClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes,
                                       min_samples_leaf=min_samples_leaf,
-                                      min_samples_split=min_samples_leaf * 2)
+                                      min_samples_split=min_samples_leaf * 2, min_impurity_decrease=0.0001)
     clf = clf.fit(train_x, train_y)
 
     print("\n\n feature")

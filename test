@@ -1,4 +1,0 @@
-    u8 idx_6 = 6;
-    u66 val_6 = flow->protocol;
-    bpf_trace_printk("Protocol:%u", val_6);
-    feature_vec.update(&idx_6, &val_6);

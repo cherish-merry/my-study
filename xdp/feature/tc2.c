@@ -11,7 +11,7 @@
 
 #define MAX_TREE_DEPTH  24
 #define TREE_LEAF -1
-#define FEATURE_VEC_LENGTH 6
+#define FEATURE_VEC_LENGTH 20
 
 #define flow_timeout  120000000
 #define activity_timeout  6000000
@@ -25,34 +25,8 @@
 #define statistic_flow_rst  6
 #define statistic_exception  7
 
-struct STATISTIC {
-    u32 n;
-    u64 dev;
-    s64 m1;
-    u64 m2;
-    u64 sum;
-    u64 min;
-    u64 max;
-};
 
-void static increase(struct STATISTIC *statistic, u64 *d) {
-    if (statistic->n == 0) {
-        statistic->m1 = statistic->m2 = 0;
-        statistic->min = statistic->max = *d;
-    }
-    statistic->n++;
-    statistic->sum += *d;
-    if (*d < statistic->min) statistic->min = *d;
-    if (*d > statistic->max) statistic->max = *d;
-    if (*d > statistic->m1) {
-        statistic->dev = *d - statistic->m1;
-        statistic->m1 += statistic->dev / statistic->n;
-    } else {
-        statistic->dev = statistic->m1 - *d;
-        statistic->m1 -= statistic->dev / statistic->n;
-    }
-    statistic->m2 += (statistic->n - 1) * statistic->dev * statistic->dev / statistic->n;
-}
+
 
 
 struct FLOW_KEY {
@@ -69,15 +43,24 @@ struct FLOW_FEATURE_NODE {
     // 标记源地址
     u32 src;
 
+    //global
     u8 protocol;
+
+    u8 fwd_fin;
+
+    u8 back_fin;
 
     u64 flow_start_time;
 
     u64 flow_end_time;
 
-    u8 fwd_fin;
+    u32 packet_length;
 
-    u8 back_fin;
+    u32 packet_num;
+
+    u32 min_packet_length;
+
+    u32 max_packet_length;
 
     u8 fin;
 
@@ -94,16 +77,6 @@ struct FLOW_FEATURE_NODE {
     u8 cwr;
 
     u8 ece;
-
-
-    struct STATISTIC *packet_len;
-
-//    struct STATISTIC packet_len;
-//
-//
-//    struct STATISTIC iat;
-
-
 
     u64 total_iat;
 
@@ -172,9 +145,26 @@ struct FLOW_FEATURE_NODE {
     u64 back_flow_end_time;
 };
 
+struct STATISTIC {
+    u32 n;
+    s64 m1;
+    u64 m2;
+    u64 sum;
+};
+
+void static increase(struct STATISTIC *statistic, u64 *d) {
+    if (statistic->n == 0) {
+        statistic->m1 = statistic->m2 = 0;
+    }
+    statistic->n++;
+    statistic->m1 += (*d - statistic->m1) / statistic->n;
+    statistic->m2 += (statistic->n - 1) * (*d - statistic->m1) * (*d - statistic->m1) / statistic->n;
+}
+
+
 struct PACKET_INFO {
     struct FLOW_KEY *flow_key;
-    u64 payload;
+    u32 payload;
     u8 fin, syn, rst, psh, ack, urg, cwr, ece;
     u16 win;
     u64 current_time;
@@ -261,14 +251,16 @@ void static addFirstPacket(struct PACKET_INFO *packet_info) {
     statistic.increment(statistic_flow);
 
     struct FLOW_FEATURE_NODE zero = {};
-    struct STATISTIC packet_len = {};
-    zero.packet_len = &packet_len;
-
     zero.protocol = packet_info->flow_key->protocol;
+
+
     checkFlag(&zero, packet_info);
     zero.flow_start_time = zero.flow_end_time = zero.active_start_time = zero.active_end_time = packet_info->current_time;
 
-    increase(zero.packet_len, &packet_info->payload);
+
+    zero.packet_num = 1;
+    zero.min_packet_length = zero.max_packet_length = zero.packet_length = packet_info->payload;
+
 
     zero.src = packet_info->flow_key->src;
     zero.fwd_win = packet_info->win;
@@ -281,16 +273,18 @@ void static addFirstPacket(struct PACKET_INFO *packet_info) {
 
 void static addPacket(struct PACKET_INFO *packet_info, struct FLOW_FEATURE_NODE *flow) {
     checkFlag(flow, packet_info);
-
-    increase(flow->packet_len, &packet_info->payload);
+    flow->packet_num++;
+    flow->packet_length += packet_info->payload;
+    if (packet_info->payload < flow->min_packet_length) flow->min_packet_length = packet_info->payload;
+    if (packet_info->payload > flow->max_packet_length) flow->max_packet_length = packet_info->payload;
 
     u64 iat = packet_info->current_time - flow->flow_end_time;
     flow->total_iat += iat;
 
-    if (flow->packet_len.n == 2) flow->min_iat = iat;
+    if (flow->packet_num == 2) flow->min_iat = iat;
     else if (iat < flow->min_iat) flow->min_iat = iat;
 
-    if (flow->packet_len.n == 2) flow->max_iat = iat;
+    if (flow->packet_num == 2) flow->max_iat = iat;
     else if (iat > flow->max_iat) flow->max_iat = iat;
 
     flow->flow_end_time = packet_info->current_time;
@@ -349,7 +343,7 @@ int my_program(struct __sk_buff *skb) {
     struct ip_t *ip = cursor_advance(cursor, sizeof(*ip));
     statistic.increment(statistic_packet_num);
 
-//    if (ip->src != 3232235891 && ip->dst != 3232235891) return 0;
+    if (ip->src != 3232235891 && ip->dst != 3232235891) return 0;
 
 
     if (ip->nextp == IPPROTO_TCP || ip->nextp == IPPROTO_UDP) {
@@ -476,86 +470,71 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
     u64 feature_vec[FEATURE_VEC_LENGTH];
     bpf_trace_printk("duration:%llu", flow->flow_end_time - flow->flow_start_time);
 
-    feature_vec[0] = flow->packet_len.sum;
-    bpf_trace_printk("packet_sum:%llu", feature_vec[0]);
+    feature_vec[0] = flow->packet_length / flow->packet_num;
+    bpf_trace_printk("mean_packet_length:%llu", feature_vec[0]);
 
-    feature_vec[1] = flow->packet_len.sum / flow->packet_len.n;
-    bpf_trace_printk("mean_packet_length:%llu", feature_vec[1]);
+    feature_vec[1] = (u64)
+    flow->packet_length * 1000000 / (u64)(flow->flow_end_time - flow->flow_start_time);
+    bpf_trace_printk("Flow Bytes/s:%llu", feature_vec[1]);
 
-    feature_vec[2] = flow->packet_len.m2 / (flow->packet_len.n - 1);
-    bpf_trace_printk("std_packet_length:%llu", feature_vec[2]);
+    feature_vec[2] = flow->urg;
+    bpf_trace_printk("URG Flag Count:%llu", feature_vec[2]);
 
-    feature_vec[3] = flow->packet_len.max;
-    bpf_trace_printk("packet_max:%llu", feature_vec[3]);
+    feature_vec[3] = flow->syn;
+    bpf_trace_printk("SYN Flag Count:%llu", feature_vec[3]);
 
-    feature_vec[4] = flow->packet_len.min;
-    bpf_trace_printk("packet_min:%llu", feature_vec[4]);
+    feature_vec[4] = flow->min_iat;
+    bpf_trace_printk("Flow IAT Min:%llu", feature_vec[4]);
 
-    feature_vec[5] = flow->packet_len.n;
-    bpf_trace_printk("packet_num:%llu", feature_vec[5]);
+    feature_vec[5] = flow->total_iat / (flow->packet_num - 1);
+    bpf_trace_printk("Flow IAT Mean:%llu", feature_vec[5]);
 
-//    feature_vec[1] = (u64)
-//    flow->packet_len.sum * 1000000 / (u64)(flow->flow_end_time - flow->flow_start_time);
-//    bpf_trace_printk("Flow Bytes/s:%llu", feature_vec[1]);
-//
-//    feature_vec[2] = flow->urg;
-//    bpf_trace_printk("URG Flag Count:%llu", feature_vec[2]);
-//
-//    feature_vec[3] = flow->syn;
-//    bpf_trace_printk("SYN Flag Count:%llu", feature_vec[3]);
-//
-//    feature_vec[4] = flow->min_iat;
-//    bpf_trace_printk("Flow IAT Min:%llu", feature_vec[4]);
-//
-//    feature_vec[5] = flow->total_iat / (flow->packet_len.n - 1);
-//    bpf_trace_printk("Flow IAT Mean:%llu", feature_vec[5]);
-//
-//
-//    bpf_trace_printk("Active Times:%llu", flow->active_times);
-//
-//    feature_vec[6] = flow->total_active / flow->active_times;
-//    bpf_trace_printk("Active Mean:%llu", feature_vec[6]);
-//
-//    feature_vec[7] = flow->max_idle;
-//    bpf_trace_printk("Idle Max:%llu", feature_vec[7]);
-//
-//    feature_vec[8] = flow->fwd_packet_length;
-//    bpf_trace_printk("Total Length of Fwd Packets:%llu", feature_vec[8]);
-//
-//    feature_vec[9] = flow->fwd_packet_num;
-//    bpf_trace_printk("Total Fwd Packets:%llu", feature_vec[9]);
-//
-//    feature_vec[10] = flow->fwd_max_packet_length;
-//    bpf_trace_printk("Fwd Packet Length Max:%llu", feature_vec[10]);
-//
-//    feature_vec[11] = flow->fwd_min_packet_length;
-//    bpf_trace_printk("Fwd Packet Length Min:%llu", feature_vec[11]);
-//
-//    feature_vec[12] = flow->fwd_total_iat;
-//    bpf_trace_printk("Fwd IAT Total:%llu", feature_vec[12]);
-//
-//    feature_vec[13] = flow->fwd_win;
-//    bpf_trace_printk("Init_Win_bytes_forward:%llu", feature_vec[13]);
-//
-//
-//    feature_vec[14] = flow->back_packet_length;
-//    bpf_trace_printk("Total Length of Bwd Packets:%llu", feature_vec[14]);
-//
-//    feature_vec[15] = flow->back_packet_num;
-//    bpf_trace_printk("Total Backward Packets:%llu", feature_vec[15]);
 
-//    feature_vec[16] = flow->back_packet_length / flow->back_packet_num;
-//    bpf_trace_printk("Bwd Packet Length Mean:%llu", feature_vec[16]);
-//
-//    feature_vec[17] = (u64)
-//    flow->back_packet_num * 1000000 / (u64)(flow->flow_end_time - flow->flow_start_time);
-//    bpf_trace_printk("Bwd Packets/s:%llu", feature_vec[17]);
-//
-//    feature_vec[18] = flow->back_min_iat;
-//    bpf_trace_printk("Bwd IAT Min:%llu", feature_vec[18]);
-//
-//    feature_vec[19] = flow->back_win;
-//    bpf_trace_printk("Init_Win_bytes_backward:%llu", feature_vec[19]);
+    bpf_trace_printk("Active Times:%llu", flow->active_times);
+
+    feature_vec[6] = flow->total_active / flow->active_times;
+    bpf_trace_printk("Active Mean:%llu", feature_vec[6]);
+
+    feature_vec[7] = flow->max_idle;
+    bpf_trace_printk("Idle Max:%llu", feature_vec[7]);
+
+    feature_vec[8] = flow->fwd_packet_length;
+    bpf_trace_printk("Total Length of Fwd Packets:%llu", feature_vec[8]);
+
+    feature_vec[9] = flow->fwd_packet_num;
+    bpf_trace_printk("Total Fwd Packets:%llu", feature_vec[9]);
+
+    feature_vec[10] = flow->fwd_max_packet_length;
+    bpf_trace_printk("Fwd Packet Length Max:%llu", feature_vec[10]);
+
+    feature_vec[11] = flow->fwd_min_packet_length;
+    bpf_trace_printk("Fwd Packet Length Min:%llu", feature_vec[11]);
+
+    feature_vec[12] = flow->fwd_total_iat;
+    bpf_trace_printk("Fwd IAT Total:%llu", feature_vec[12]);
+
+    feature_vec[13] = flow->fwd_win;
+    bpf_trace_printk("Init_Win_bytes_forward:%llu", feature_vec[13]);
+
+
+    feature_vec[14] = flow->back_packet_length;
+    bpf_trace_printk("Total Length of Bwd Packets:%llu", feature_vec[14]);
+
+    feature_vec[15] = flow->back_packet_num;
+    bpf_trace_printk("Total Backward Packets:%llu", feature_vec[15]);
+
+    feature_vec[16] = flow->back_packet_length / flow->back_packet_num;
+    bpf_trace_printk("Bwd Packet Length Mean:%llu", feature_vec[16]);
+
+    feature_vec[17] = (u64)
+    flow->back_packet_num * 1000000 / (u64)(flow->flow_end_time - flow->flow_start_time);
+    bpf_trace_printk("Bwd Packets/s:%llu", feature_vec[17]);
+
+    feature_vec[18] = flow->back_min_iat;
+    bpf_trace_printk("Bwd IAT Min:%llu", feature_vec[18]);
+
+    feature_vec[19] = flow->back_win;
+    bpf_trace_printk("Init_Win_bytes_backward:%llu", feature_vec[19]);
 
     u32 current_node = 0;
     for (int i = 0; i < MAX_TREE_DEPTH; i++) {

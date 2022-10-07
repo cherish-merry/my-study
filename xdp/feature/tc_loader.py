@@ -23,7 +23,7 @@ value = np.fromfile("./result/value.bin", dtype=int)
 decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ");\n" + \
                   "BPF_ARRAY(child_right, s32," + str(childrenRight.shape[0]) + ");\n" + \
                   "BPF_ARRAY(feature, s32," + str(feature.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(threshold, u64," + str(threshold.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(threshold, u32," + str(threshold.shape[0]) + ");\n" + \
                   "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n"
 
 with open('tc.c', 'r', encoding='utf-8') as f:
@@ -131,8 +131,8 @@ while 1:
         #         print("Idle Min:", v.minIdle)
         #         print("End Way:", v.endWay)
         time.sleep(1)
-        # for k, v in exception_table.items():
-        #     print(dec2addr(k.src), ":", v)
+        for k, v in exception_table.items():
+            print(dec2addr(k.src), ":", v)
         print("----------------------------")
 
     except KeyboardInterrupt:

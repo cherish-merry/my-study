@@ -6,12 +6,10 @@ import sys
 from sklearn.metrics import accuracy_score
 import matplotlib
 import collections
-
 matplotlib.use('qtagg')
 import matplotlib.pyplot as plt
 
 
-# sudo cat /sys/kernel/debug/tracing/trace_pipe
 def label(s):
     if s == "BENIGN":
         return 0
@@ -20,29 +18,23 @@ def label(s):
 
 
 if __name__ == '__main__':
-    # np.set_printoptions(threshold=np.inf)
-    # pd.set_option('display.max_columns', None)  # 显示完整的列
-    # pd.set_option('display.max_rows', None)  # 显示完整的行
-
-    # usecols = range(6, 27)
-    # usecols={1, 12, 13, 14, 15, 16, 27, 28, 29, 30, 31, 32, 33, 34, 35, 40, 41, 42, 43, 44, 45, 46}
-
-    #  usecols=range(7, 85)
-    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017/wednesday/csv/Wednesday-workingHours.csv",
+    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017/wednesday/csv/Wednesday-WorkingHours.pcap_Flow.csv",
                      converters={"Label": label},
-
-                     )
+                     usecols=["Pkt Len Std",
+                              "Flow IAT Max", "Tot Bwd Pkts", "Flow IAT Min", "Init Fwd Win Byts", "Bwd IAT Mean"
+                              , "TotLen Fwd Pkts", "Fwd Pkt Len Min", "SYN Flag Cnt", "Pkt Len Mean", "Active Max"
+                              , "Flow IAT Mean", "Pkt Len Max", "Bwd Pkt Len Std", "Label"])
     print(df.shape)
 
     df = df.dropna()
 
     print(df.shape)
 
-    # df = df.drop(df[df[' Flow Duration'] < 10].index)
+    # df = df.drop(df[df['Flow Duration'] == 0].index)
 
-    # print(df.shape)
+    # df = df.drop(['Flow Duration'], axis=1)
 
-    # df.to_csv("/media/ckz/T7/datasets/CICIDS2017-Processed/csv/all/all_2.csv", encoding="utf_8_sig", index=False)
+    print(df.shape)
 
     columns = np.array(df.columns)
     print(columns)
@@ -56,11 +48,17 @@ if __name__ == '__main__':
 
     train_x = train_array[:, :train_array.shape[1] - 1]
     train_y = train_array[:, train_array.shape[1] - 1]
+
+    test_array = np.array(test_data)
+    test_array[np.isinf(test_array)] = sys.maxsize
+    test_x = test_array[:, :test_array.shape[1] - 1]
+    test_y = test_array[:, test_array.shape[1] - 1]
+
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.0005
+    percentage = 0.0001
 
-    max_depth = 24
+    max_depth = 15
 
     max_leaf_nodes = 144
 
@@ -108,25 +106,18 @@ if __name__ == '__main__':
     graph.render("../xdp/feature/result/decide_tree")
 
     # predict
-    test_array = np.array(test_data)
-
-    test_array[np.isinf(test_array)] = sys.maxsize
-
-    test_x = test_array[:, :test_array.shape[1] - 1]
-    test_y = test_array[:, test_array.shape[1] - 1]
-
     predict_y = clf.predict(test_x)
 
     print(accuracy_score(test_y, predict_y))
 
-    # 12 80
     # test = []
     # for i in range(36):
-    #     clf = tree.DecisionTreeClassifier(max_depth=(i + 1)
+    #     clf = tree.DecisionTreeClassifier(max_depth=15
     #                                       , criterion="entropy",
-    #                                       max_leaf_nodes=144
+    #                                       max_leaf_nodes=16 * (i + 1)
     #                                       , random_state=30
     #                                       , splitter="random",
+    #                                       min_impurity_decrease=0.0001,
     #                                       min_samples_leaf=int(exceptions * percentage),
     #                                       min_samples_split=int(int(exceptions * percentage * 2))
     #                                       )

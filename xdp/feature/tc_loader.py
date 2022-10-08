@@ -19,12 +19,14 @@ childrenRight = np.fromfile("./result/childrenRight.bin", dtype=int)
 feature = np.fromfile("./result/feature.bin", dtype=int)
 threshold = np.fromfile("./result/threshold.bin", dtype=int)
 value = np.fromfile("./result/value.bin", dtype=int)
+impurity = np.fromfile("./result/impurity.bin", dtype=int)
 
 decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ");\n" + \
                   "BPF_ARRAY(child_right, s32," + str(childrenRight.shape[0]) + ");\n" + \
                   "BPF_ARRAY(feature, s32," + str(feature.shape[0]) + ");\n" + \
                   "BPF_ARRAY(threshold, u32," + str(threshold.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n"
+                  "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(impurity, u32," + str(value.shape[0]) + ");\n"
 
 with open('tc.c', 'r', encoding='utf-8') as f:
     program = f.read()
@@ -40,6 +42,8 @@ child_left_table = b.get_table("child_left")
 child_right_table = b.get_table("child_right")
 feature_table = b.get_table("feature")
 threshold_table = b.get_table("threshold")
+impurity_table = b.get_table("impurity")
+
 value_table = b.get_table("value")
 statistic_table = b.get_table("statistic")
 
@@ -58,6 +62,9 @@ for i in range(threshold.shape[0]):
 
 for i in range(value.shape[0]):
     value_table[i] = value_table.Leaf(value[i])
+
+for i in range(impurity.shape[0]):
+    impurity_table[i] = impurity_table.Leaf(impurity[i])
 
 fn = b.load_func("my_program", BPF.SOCKET_FILTER)
 b.attach_raw_socket(fn, device)

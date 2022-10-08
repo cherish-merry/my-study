@@ -1,8 +1,8 @@
 import pandas as pd
 import os
 
-folder_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/15s/day'
-res_path = '/media/ckz/T7/datasets/CICIDS2017-Processed/csv/15s/all'
+folder_path = '/media/ckz/T7/datasets/merge'
+res_path = '/media/ckz/T7/datasets/merge'
 merge_name = 'all.csv'
 
 file_list = os.listdir(folder_path)

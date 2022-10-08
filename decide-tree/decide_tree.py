@@ -6,6 +6,7 @@ import sys
 from sklearn.metrics import accuracy_score
 import matplotlib
 import collections
+
 matplotlib.use('qtagg')
 import matplotlib.pyplot as plt
 
@@ -17,13 +18,27 @@ def label(s):
         return 1
 
 
+'''
+usecols= ["Pkt Len Std","Bwd Pkt Len Mean", "Tot Bwd Pkts", 
+"Flow IAT Mean", "Init Bwd Win Byts", "Tot Fwd Pkts", 
+"Idle Max", "Bwd Pkt Len Std", "Active Max", "Pkt Len Mean", 
+"Bwd IAT Max", "Fwd IAT Std", "Bwd IAT Mean", "Fwd Pkt Len Std", "RST Flag Cnt", "Fwd Pkt Len Min", "Pkt Len Max"]
+'''
+
 if __name__ == '__main__':
-    df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017/wednesday/csv/Wednesday-WorkingHours.pcap_Flow.csv",
-                     converters={"Label": label},
-                     usecols=["Pkt Len Std",
-                              "Flow IAT Max", "Tot Bwd Pkts", "Flow IAT Min", "Init Fwd Win Byts", "Bwd IAT Mean"
-                              , "TotLen Fwd Pkts", "Fwd Pkt Len Min", "SYN Flag Cnt", "Pkt Len Mean", "Active Max"
-                              , "Flow IAT Mean", "Pkt Len Max", "Bwd Pkt Len Std", "Label"])
+    # df = pd.read_csv("/media/ckz/T7/datasets/merge/all.csv",
+    #                  converters={"Label": label},
+    #                  usecols=["Pkt Len Std", "Bwd Pkt Len Mean", "Tot Bwd Pkts",
+    #                           "Flow IAT Mean", "Tot Fwd Pkts",
+    #                           "Idle Max", "Bwd Pkt Len Std", "Active Max", "Pkt Len Mean",
+    #                           "Bwd IAT Max", "Fwd IAT Std", "Bwd IAT Mean", "Fwd Pkt Len Std",
+    #                           "Fwd Pkt Len Min", "Pkt Len Max", "Flow Pkts/s", "Label"])
+
+    df = pd.read_csv("/media/ckz/T7/datasets/merge/all.csv",
+                     converters={"Label": label})
+
+    # df = pd.read_csv("/media/ckz/T7/datasets/CICIDS2017/wednesday/csv/Wednesday-WorkingHours.pcap_Flow.csv",
+    #                  converters={"Label": label})
     print(df.shape)
 
     df = df.dropna()
@@ -44,19 +59,19 @@ if __name__ == '__main__':
     test_data = df[~df.index.isin(train_data.index)].sample(frac=1, random_state=0, axis=0)
     train_array = np.array(train_data)
 
-    train_array[np.isinf(train_array)] = sys.maxsize
+    train_array[np.isinf(train_array)] = 0
 
     train_x = train_array[:, :train_array.shape[1] - 1]
     train_y = train_array[:, train_array.shape[1] - 1]
 
     test_array = np.array(test_data)
-    test_array[np.isinf(test_array)] = sys.maxsize
+    test_array[np.isinf(test_array)] = 0
     test_x = test_array[:, :test_array.shape[1] - 1]
     test_y = test_array[:, test_array.shape[1] - 1]
 
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.0001
+    percentage = 0.0005
 
     max_depth = 15
 
@@ -75,16 +90,17 @@ if __name__ == '__main__':
                                       min_samples_split=min_samples_leaf * 2, min_impurity_decrease=0.0001)
     clf = clf.fit(train_x, train_y)
 
-    print("\n\n feature")
-    counter = collections.Counter(clf.tree_.feature)
-    for key in counter:
-        if key > 0:
-            print(columns[key].strip())
+    # print("\n\n feature")
+    # counter = collections.Counter(clf.tree_.feature)
+    # for key in counter:
+    #     if key > 0:
+    #         print(columns[key].strip())
 
     clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
     clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
     clf.tree_.feature.tofile("../xdp/feature/result/feature.bin")
     clf.tree_.threshold.astype(int).tofile("../xdp/feature/result/threshold.bin")
+    (clf.tree_.impurity*100).astype(int).tofile("../xdp/feature/result/impurity.bin")
     value = []
     values = clf.tree_.value
     for val in values:
@@ -96,6 +112,7 @@ if __name__ == '__main__':
     print(np.fromfile("../xdp/feature/result/feature.bin", dtype=int))
     print(np.fromfile("../xdp/feature/result/threshold.bin", dtype=int))
     print(np.fromfile("../xdp/feature/result/value.bin", dtype=int))
+    print(np.fromfile("../xdp/feature/result/impurity.bin", dtype=int))
 
     dot_data = tree.export_graphviz(clf, out_file=None,
                                     feature_names=columns[:columns.shape[0] - 1],

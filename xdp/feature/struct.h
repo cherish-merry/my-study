@@ -1,33 +1,56 @@
-struct STATISTIC_32 {
+struct STATISTIC_PACKET_LENGTH {
     u32 n;
     u32 dev;
     s32 m1;
     u32 m2;
     u32 sum;
-    u32 min;
     u32 max;
 };
 
-struct STATISTIC_SUM_32 {
-    u32 n;
-    u32 sum;
-};
-
-struct STATISTIC_MIN_32 {
-    u32 n;
-    u32 min;
-};
-
-struct STATISTIC_MAX_32 {
-    u32 n;
-    u32 max;
-};
-
-struct STATISTIC_STD_32 {
+struct STATISTIC_FWD_PACKET_LENGTH {
     u32 n;
     u32 dev;
     s32 m1;
     u32 m2;
+    u32 min;
+};
+
+struct STATISTIC_BACK_PACKET_LENGTH {
+    u32 n;
+    u32 dev;
+    s32 m1;
+    u32 m2;
+    u32 sum;
+};
+
+struct STATISTIC_FLOW_IAT {
+    u32 n;
+    u32 sum;
+};
+
+struct STATISTIC_FWD_IAT {
+    u32 n;
+    u32 dev;
+    s32 m1;
+    u32 m2;
+};
+
+struct STATISTIC_BACK_IAT {
+    u32 n;
+    u32 sum;
+    u32 max;
+};
+
+
+struct STATISTIC_ACTIVE {
+    u32 n;
+    u32 max;
+};
+
+
+struct STATISTIC_IDLE {
+    u32 n;
+    u32 max;
 };
 
 
@@ -42,7 +65,7 @@ struct FLOW_KEY {
 struct FLOW_FEATURE_NODE {
     u8 fwd_fin;
     u8 back_fin;
-    u8 syn;
+//    u8 rst;
 
     u16 fwd_win;
     u16 back_win;
@@ -55,14 +78,14 @@ struct FLOW_FEATURE_NODE {
     u32 fwd_flow_end_time;
     u32 back_flow_end_time;
 
-    struct STATISTIC_32 packet_len;
-    struct STATISTIC_32 fwd_packet_length;
-    struct STATISTIC_32 back_packet_length;
-    struct STATISTIC_MAX_32 active;
-//    struct STATISTIC_MAX_32 idle;
-    struct STATISTIC_32 iat;
-//    struct STATISTIC_32 fwd_iat;
-    struct STATISTIC_SUM_32 back_iat;
+    struct STATISTIC_PACKET_LENGTH packet_length;
+    struct STATISTIC_FWD_PACKET_LENGTH fwd_packet_length;
+    struct STATISTIC_BACK_PACKET_LENGTH back_packet_length;
+    struct STATISTIC_ACTIVE active;
+    struct STATISTIC_IDLE idle;
+    struct STATISTIC_FLOW_IAT iat;
+    struct STATISTIC_FWD_IAT fwd_iat;
+    struct STATISTIC_BACK_IAT back_iat;
 };
 
 struct PACKET_INFO {

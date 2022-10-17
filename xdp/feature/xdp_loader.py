@@ -80,16 +80,21 @@ while 1:
             val = statistic_table.sum(k).value
             i = k.value
             if i == 0:
-                print("processed_packet:", val)
+                print("packet_num:", val)
             if i == 1:
-                print("tcp_udp:", val)
+                print("tcp:", val)
             if i == 2:
-                print("flow:", val)
+                print("udp:", val)
             if i == 3:
-                print("flow_end:", val)
+                print("flow:", val)
             if i == 4:
+                print("flow_timeout:", val)
+            if i == 5:
+                print("flow_fin:", val)
+            if i == 6:
+                print("flow_rst:", val)
+            if i == 7:
                 print("exception:", val)
-
         # for k, v in result_table.items():
         #     if dec2addr(k.sourceIPAddress) == "192.168.1.115":
         #         print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),

@@ -12,8 +12,8 @@
 #define MAX_TREE_DEPTH  15
 #define TREE_LEAF -1
 #define FEATURE_VEC_LENGTH 16
-#define flow_timeout  120000
-#define activity_timeout  5000
+#define flow_timeout  15000
+#define activity_timeout  3000
 #define statistic_packet_num  0
 #define statistic_tcp  1
 #define statistic_udp  2
@@ -229,7 +229,7 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
     }
     u32 * value_val = value.lookup(&current_node);
     u32 * impurity_val = impurity.lookup(&current_node);
-    if (value_val == NULL || impurity_val == NULL || *impurity_val >= 10) return 0;
+    if (value_val == NULL || impurity_val == NULL || *impurity_val >= 20) return 0;
     if (*value_val == 1) bpf_trace_printk("Attack");
     bpf_trace_printk("--------------------------------------------------");
     return *value_val;

@@ -31,7 +31,7 @@ decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ")
 with open('tc.c', 'r', encoding='utf-8') as f:
     program = f.read()
 
-device = "enp3s0"
+device = "enp2s0"
 # b = BPF(src_file="program.c")
 b = BPF(text=decide_tree_map + program)
 

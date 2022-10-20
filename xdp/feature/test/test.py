@@ -7,6 +7,6 @@ def dec2addr(dec):
     return ".".join([str(dec >> x & 0xff) for x in [0, 8, 16, 24]])
 
 
-print(addr2dec("115.1.168.192"))
+print(addr2dec("10.255.255.0"))
 
-print(dec2addr(3232235891))
+print(dec2addr(167880896))

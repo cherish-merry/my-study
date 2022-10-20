@@ -31,6 +31,7 @@ with open('xdp.c', 'r', encoding='utf-8') as f:
     program = f.read()
 
 device = "enp3s0"
+#device = "wlp3s0b1"
 # b = BPF(src_file="program.c")
 b = BPF(text=decide_tree_map + program)
 

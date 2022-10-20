@@ -7,9 +7,9 @@
 
 #define MAX_TREE_DEPTH  15
 #define TREE_LEAF -1
-#define FEATURE_VEC_LENGTH 27
-#define flow_timeout  120000
-#define activity_timeout  5000
+#define FEATURE_VEC_LENGTH 16
+#define flow_timeout  15000
+#define activity_timeout  3000
 #define statistic_packet_num  0
 #define statistic_tcp  1
 #define statistic_udp  2
@@ -62,10 +62,6 @@ struct FLOW_FEATURE_NODE {
     struct STATISTIC packet_length;
 
     struct STATISTIC iat;
-
-    struct STATISTIC active;
-
-    struct STATISTIC idle;
 };
 
 struct PACKET_INFO {
@@ -76,14 +72,11 @@ struct PACKET_INFO {
     u32 payload;
 };
 
-
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  10000);
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, result_table,  10000);
 BPF_TABLE("lru_hash", struct FLOW_KEY,  u32 , exception_table,  10000);
 BPF_PERCPU_ARRAY(statistic, u32,
 8);
-
-
 
 void static increase(struct STATISTIC *statistic, u32 d) {
     if (statistic->n == 0) {
@@ -105,73 +98,54 @@ void static increase(struct STATISTIC *statistic, u32 d) {
 }
 
 u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
+    if (flow->flow_end_time - flow->flow_start_time < 1 || flow->packet_length.n <= 1) return 0;
+
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
-    feature_vec[0] = flow->protocol;
+//    feature_vec[0] = flow->protocol;
 
-    feature_vec[1] = flow->flow_end_time - flow->flow_start_time;
+    feature_vec[0] = flow->flow_end_time - flow->flow_start_time;
 
-    feature_vec[2] = flow->packet_length.sum * 1000 / (flow->flow_end_time - flow->flow_start_time);
+    feature_vec[1] = flow->packet_length.sum * 1000 / (flow->flow_end_time - flow->flow_start_time);
 
-    feature_vec[3] = flow->packet_length.n * 1000 / (flow->flow_end_time - flow->flow_start_time);
+    feature_vec[2] = flow->packet_length.n * 1000 * 100 / (flow->flow_end_time - flow->flow_start_time);
 
-    feature_vec[4] = flow->iat.sum / flow->iat.n;
+    feature_vec[3] = flow->iat.sum / flow->iat.n;
 
-    feature_vec[5] = flow->iat.m2 / (flow->iat.n - 1);
+    feature_vec[4] = flow->iat.m2 / (flow->iat.n - 1);
 
-    feature_vec[6] = flow->iat.max;
+    feature_vec[5] = flow->iat.max;
 
-    feature_vec[7] = flow->iat.min;
+    feature_vec[6] = flow->iat.min;
 
-    feature_vec[8] = flow->packet_length.n;
+    feature_vec[7] = flow->packet_length.n;
 
-    feature_vec[9] = flow->packet_length.min;
+    feature_vec[8] = flow->packet_length.min;
 
-    feature_vec[10] = flow->packet_length.max;
-
-
-    feature_vec[11] = flow->packet_length.sum / flow->packet_length.n;
-
-    feature_vec[12] = flow->packet_length.m2 / (flow->packet_length.n - 1);
+    feature_vec[9] = flow->packet_length.max;
 
 
+    feature_vec[10] = flow->packet_length.sum / flow->packet_length.n;
+
+    feature_vec[11] = flow->packet_length.m2 / (flow->packet_length.n - 1);
 
 
-    feature_vec[13] = flow->fin;
+    feature_vec[12] = flow->fin;
 
-    feature_vec[14] = flow->syn;
+    feature_vec[13] = flow->syn;
 
-    feature_vec[15] = flow->rst;
+    feature_vec[14] = flow->rst;
 
-    feature_vec[16] = flow->psh;
+    feature_vec[15] = flow->psh;
 
-    feature_vec[17] = flow->urg;
+//    feature_vec[17] = flow->urg;
 
-    feature_vec[18] = flow->win;
-
-
-    feature_vec[19] = flow->active.sum / flow->active.n;
-
-    feature_vec[20] = flow->active.m2 / (flow->active.n - 1);
-
-    feature_vec[21] = flow->active.max;
-
-    feature_vec[22] = flow->active.min;
+//    feature_vec[18] = flow->win;
 
 
-    feature_vec[23] = flow->idle.sum / flow->idle.n;
-
-    feature_vec[24] = flow->idle.m2 / (flow->idle.n - 1);
-
-    feature_vec[25] = flow->idle.max;
-
-    feature_vec[26] = flow->idle.min;
-
-
-    for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
-        bpf_trace_printk("%d:%d", i, feature_vec[i]);
-    }
-
+//    for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
+//        bpf_trace_printk("%u:%u", i, feature_vec[i]);
+//    }
 
     u32 current_node = 0;
     for (int i = 0; i < MAX_TREE_DEPTH; i++) {
@@ -187,24 +161,20 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
         u64 a = feature_vec[*feature_val];
         if (a <= *threshold_val) current_node = *left_val;
         else current_node = *right_val;
-//        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
+        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
     }
     u32 * value_val = value.lookup(&current_node);
     if (value_val == NULL) return 0;
+
+    if (*value_val == 1) {
+        statistic.increment(statistic_exception);
+        bpf_trace_printk("Label: Attack\n");
+    } else {
+        bpf_trace_printk("Label: Normal\n");
+    }
     return *value_val;
 }
 
-void static updateActiveIdleTime(u64 current_time, struct FLOW_FEATURE_NODE *flow) {
-    if (current_time - flow->flow_end_time > activity_timeout) {
-        if (flow->active_end_time - flow->active_start_time > 0) {
-            increase(&flow->active, flow->active_end_time - flow->active_start_time);
-        }
-        increase(&flow->idle, current_time - flow->active_end_time);
-        flow->active_start_time = flow->active_end_time = current_time;
-    } else {
-        flow->active_end_time = current_time;
-    }
-}
 
 void static addFirstPacket(struct PACKET_INFO *packet_info) {
     statistic.increment(statistic_flow);
@@ -240,23 +210,26 @@ int my_program(struct xdp_md *ctx) {
     struct tcphdr *th;
     struct udphdr *uh;
 
-
+    statistic.increment(statistic_packet_num);
 
     ip = data + sizeof(*eth);
     if (data + sizeof(*eth) + sizeof(struct iphdr) > data_end) {
         return XDP_DROP;
     }
 
-    if (ip->saddr != 1929488576) {
-        return XDP_PASS;
-    }
+//    if (ip->saddr != 1929488576) {
+//        return XDP_PASS;
+//    }
+
+//    if (htonl(ip->saddr) < 184549120 || htonl(ip->saddr) > 184549375) {
+//        return XDP_PASS;
+//    }
+
 
     if (ip->protocol == IPPROTO_TCP || ip->protocol == IPPROTO_UDP) {
         u8 protocol;
         u32 src_port, dest_port;
         struct PACKET_INFO packet_info = {};
-
-        statistic.increment(statistic_packet_num);
 
         if (ip->protocol == IPPROTO_TCP) {
             th = (struct tcphdr *) (ip + 1);
@@ -265,9 +238,9 @@ int my_program(struct xdp_md *ctx) {
             }
             statistic.increment(statistic_tcp);
             protocol = IPPROTO_TCP;
-            packet_info.payload = data_end - (void *) (long) (th) - (th->doff<<2);
-            src_port = htons(th->source);
-            dest_port = htons(th->dest);
+            packet_info.payload = data_end - (void *) (long) (th) - (th->doff << 2);
+            src_port = th->source;
+            dest_port = th->dest;
             packet_info.fin = th->fin;
             packet_info.syn = th->syn;
             packet_info.psh = th->psh;
@@ -283,14 +256,14 @@ int my_program(struct xdp_md *ctx) {
             statistic.increment(statistic_udp);
             protocol = IPPROTO_UDP;
             packet_info.payload = data_end - (void *) (long) (uh + 1);
-            src_port = htons(uh->source);
-            dest_port = htons(uh->dest) ;
+            src_port = uh->source;
+            dest_port = uh->dest;
         }
 
         struct FLOW_KEY flow_key = {};
         flow_key.protocol = protocol;
-        flow_key.src = htons( ip->saddr);
-        flow_key.dest =htons(ip->daddr) ;
+        flow_key.src = ip->saddr;
+        flow_key.dest = ip->daddr;
         flow_key.src_port = src_port;
         flow_key.dest_port = dest_port;
 
@@ -306,16 +279,7 @@ int my_program(struct xdp_md *ctx) {
         if (packet_info.current_time - flow->flow_start_time > flow_timeout) {
             statistic.increment(statistic_flow_timeout);
             //analysis
-            if (analysis(flow) == 1) {
-                statistic.increment(statistic_exception);
-                bpf_trace_printk("Attack\n");
-            } else {
-                bpf_trace_printk("Label: Normal\n");
-            }
-            if (flow_key.src == 1929488576) {
-                result_table.insert(&flow_key, flow);
-            }
-            //remove
+            analysis(flow);
             flow_table.delete(&flow_key);
             //addFirstPacket
             if (packet_info.fin != 1 && packet_info.rst != 1) addFirstPacket(&packet_info);
@@ -326,25 +290,11 @@ int my_program(struct xdp_md *ctx) {
             if (packet_info.fin == 1) statistic.increment(statistic_flow_fin);
             if (packet_info.rst == 1) statistic.increment(statistic_flow_rst);
 
-            // addPacket
             addPacket(&packet_info, flow);
-            if (analysis(flow) == 1) {
-                statistic.increment(statistic_exception);
-                bpf_trace_printk("Label: Attack\n");
-            } else {
-                bpf_trace_printk("Label: Normal\n");
-            }
-            if (flow_key.src == 1929488576) {
-                result_table.insert(&flow_key, flow);
-            }
-            //remove
+            analysis(flow);
             flow_table.delete(&flow_key);
             return XDP_PASS;
         }
-
-        //updateActiveIdleTime
-        updateActiveIdleTime(packet_info.current_time, flow);
-        // addPacket
         addPacket(&packet_info, flow);
     }
     return XDP_PASS;

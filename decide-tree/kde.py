@@ -51,5 +51,5 @@ if __name__ == '__main__':
     #     plt.legend(labels=["Attack", "Normal"], frameon=False)
 
     plt.tight_layout()
-    plt.savefig("xdp-ml.svg", dpi=300, format="svg")
+    plt.savefig("feature.svg", dpi=300, format="svg")
     # plt.show()

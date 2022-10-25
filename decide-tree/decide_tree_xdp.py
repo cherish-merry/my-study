@@ -75,29 +75,29 @@ if __name__ == '__main__':
                                       min_samples_split=min_samples_leaf * 2, min_impurity_decrease=0.0001)
     clf = clf.fit(train_x, train_y)
 
-    print("\n\n xdp-ml")
+    print("\n\n feature")
     counter = collections.Counter(clf.tree_.feature)
     for key in counter:
         if key > 0:
             print(columns[key].strip())
 
-    clf.tree_.children_left.tofile("../xdp/xdp-ml/result/childLeft.bin")
-    clf.tree_.children_right.tofile("../xdp/xdp-ml/result/childrenRight.bin")
-    clf.tree_.feature.tofile("../xdp/xdp-ml/result/xdp-ml.bin")
-    clf.tree_.threshold.astype(int).tofile("../xdp/xdp-ml/result/threshold.bin")
-    (clf.tree_.impurity * 100).astype(int).tofile("../xdp/xdp-ml/result/impurity.bin")
+    clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
+    clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
+    clf.tree_.feature.tofile("../xdp/feature/result/feature.bin")
+    clf.tree_.threshold.astype(int).tofile("../xdp/feature/result/threshold.bin")
+    (clf.tree_.impurity * 100).astype(int).tofile("../xdp/feature/result/impurity.bin")
     value = []
     values = clf.tree_.value
     for val in values:
         value.append(np.argmax(val))
-    np.array(value).tofile("../xdp/xdp-ml/result/value.bin")
+    np.array(value).tofile("../xdp/feature/result/value.bin")
 
-    # print(np.fromfile("../xdp/xdp-ml/result/childLeft.bin", dtype=int))
-    # print(np.fromfile("../xdp/xdp-ml/result/childrenRight.bin", dtype=int))
-    # print(np.fromfile("../xdp/xdp-ml/result/xdp-ml.bin", dtype=int))
-    # print(np.fromfile("../xdp/xdp-ml/result/threshold.bin", dtype=int))
-    # print(np.fromfile("../xdp/xdp-ml/result/value.bin", dtype=int))
-    # print(np.fromfile("../xdp/xdp-ml/result/impurity.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/childLeft.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/childrenRight.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/feature.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/threshold.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/value.bin", dtype=int))
+    # print(np.fromfile("../xdp/feature/result/impurity.bin", dtype=int))
 
     dot_data = tree.export_graphviz(clf, out_file=None,
                                     feature_names=columns[:columns.shape[0] - 1],
@@ -105,7 +105,7 @@ if __name__ == '__main__':
                                     filled=True, rounded=True,
                                     special_characters=True)
     graph = graphviz.Source(dot_data)
-    graph.render("../xdp/xdp-ml/result/decide_tree")
+    graph.render("../xdp/feature/result/decide_tree")
 
     # predict
     predict_y = clf.predict(test_x)

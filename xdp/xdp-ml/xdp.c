@@ -30,7 +30,6 @@ struct STATISTIC {
     u32 max;
 };
 
-
 struct FLOW_KEY {
     u8 protocol;
     u32 src;
@@ -102,8 +101,6 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
 
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
-//    feature_vec[0] = flow->protocol;
-
     feature_vec[0] = flow->flow_end_time - flow->flow_start_time;
 
     feature_vec[1] = flow->packet_length.sum * 1000 / (flow->flow_end_time - flow->flow_start_time);
@@ -138,9 +135,6 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
 
     feature_vec[15] = flow->psh;
 
-//    feature_vec[17] = flow->urg;
-
-//    feature_vec[18] = flow->win;
 
 
 //    for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
@@ -161,16 +155,16 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
         u64 a = feature_vec[*feature_val];
         if (a <= *threshold_val) current_node = *left_val;
         else current_node = *right_val;
-        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
+//        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
     }
     u32 * value_val = value.lookup(&current_node);
     if (value_val == NULL) return 0;
 
     if (*value_val == 1) {
         statistic.increment(statistic_exception);
-        bpf_trace_printk("Label: Attack\n");
+//        bpf_trace_printk("Label: Attack\n");
     } else {
-        bpf_trace_printk("Label: Normal\n");
+//        bpf_trace_printk("Label: Normal\n");
     }
     return *value_val;
 }
@@ -202,6 +196,26 @@ void static addPacket(struct PACKET_INFO *packet_info, struct FLOW_FEATURE_NODE 
     flow->flow_end_time = packet_info->current_time;
 }
 
+void static printStatistic() {
+    u32 idx;
+    u32 * cnt;
+    for (int i = 0; i < 8; i++) {
+        idx = i;
+        cnt = statistic.lookup(&idx);
+        if (cnt) {
+            if(i == 0) bpf_trace_printk("packet_num: %u", *cnt);
+            if(i == 1) bpf_trace_printk("tcp: %u", *cnt);
+            if(i == 2) bpf_trace_printk("udp: %u", *cnt);
+            if(i == 3) bpf_trace_printk("flow: %u", *cnt);
+            if(i == 4) bpf_trace_printk("flow_timeout: %u", *cnt);
+            if(i == 5) bpf_trace_printk("flow_fin: %u", *cnt);
+            if(i == 6) bpf_trace_printk("flow_rst: %u", *cnt);
+            if(i == 7) bpf_trace_printk("exception: %u", *cnt);
+        }
+    }
+    bpf_trace_printk("-------------------------------------");
+}
+
 int my_program(struct xdp_md *ctx) {
     void *data = (void *) (long) ctx->data;
     void *data_end = (void *) (long) ctx->data_end;
@@ -210,7 +224,9 @@ int my_program(struct xdp_md *ctx) {
     struct tcphdr *th;
     struct udphdr *uh;
 
+    printStatistic();
     statistic.increment(statistic_packet_num);
+
 
     ip = data + sizeof(*eth);
     if (data + sizeof(*eth) + sizeof(struct iphdr) > data_end) {

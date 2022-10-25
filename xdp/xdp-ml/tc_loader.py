@@ -3,7 +3,6 @@
 from bcc import BPF
 import time
 import numpy as np
-import ctypes as ct
 
 
 def addr2dec(addr):
@@ -20,18 +19,19 @@ childrenRight = np.fromfile("./result/childrenRight.bin", dtype=int)
 feature = np.fromfile("./result/feature.bin", dtype=int)
 threshold = np.fromfile("./result/threshold.bin", dtype=int)
 value = np.fromfile("./result/value.bin", dtype=int)
+impurity = np.fromfile("./result/impurity.bin", dtype=int)
 
 decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ");\n" + \
                   "BPF_ARRAY(child_right, s32," + str(childrenRight.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(feature, s32," + str(feature.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(threshold, u64," + str(threshold.shape[0]) + ");\n" + \
-                  "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n"
+                  "BPF_ARRAY(xdp-ml, s32," + str(feature.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(threshold, u32," + str(threshold.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(value, u32," + str(value.shape[0]) + ");\n" + \
+                  "BPF_ARRAY(impurity, u32," + str(value.shape[0]) + ");\n"
 
-with open('xdp.c', 'r', encoding='utf-8') as f:
+with open('tc.c', 'r', encoding='utf-8') as f:
     program = f.read()
 
-device = "enp3s0"
-#device = "wlp3s0b1"
+device = "enp2s0"
 # b = BPF(src_file="program.c")
 b = BPF(text=decide_tree_map + program)
 
@@ -40,8 +40,10 @@ exception_table = b.get_table("exception_table")
 result_table = b.get_table("result_table")
 child_left_table = b.get_table("child_left")
 child_right_table = b.get_table("child_right")
-feature_table = b.get_table("feature")
+feature_table = b.get_table("xdp-ml")
 threshold_table = b.get_table("threshold")
+impurity_table = b.get_table("impurity")
+
 value_table = b.get_table("value")
 statistic_table = b.get_table("statistic")
 
@@ -61,19 +63,13 @@ for i in range(threshold.shape[0]):
 for i in range(value.shape[0]):
     value_table[i] = value_table.Leaf(value[i])
 
-fn = b.load_func("my_program", BPF.XDP)
-b.attach_xdp(device, fn, 0)
+for i in range(impurity.shape[0]):
+    impurity_table[i] = impurity_table.Leaf(impurity[i])
+
+fn = b.load_func("my_program", BPF.SOCKET_FILTER)
+b.attach_raw_socket(fn, device)
 
 print("hit CTRL+C to stop")
-
-# define statistic_packet_num  0
-# define statistic_tcp  1
-# define statistic_udp  2
-# define statistic_flow  3
-# define statistic_flow_timeout  4
-# define statistic_flow_fin  5
-# define statistic_flow_rst  6
-# define statistic_exception  7
 
 while 1:
     try:
@@ -96,11 +92,12 @@ while 1:
                 print("flow_rst:", val)
             if i == 7:
                 print("exception:", val)
-        # for k, v in result_table.items():
-        #     if dec2addr(k.sourceIPAddress) == "192.168.1.115":
-        #         print('({},{},{},{},{})'.format(k.protocolIdentifier, dec2addr(k.sourceIPAddress),
-        #                                         dec2addr(k.destinationIPAddress), k.sourceTransportPort,
-        #                                         k.destinationTransportPort))
+
+        # for k, v in flow_table.items():
+        # if dec2addr(k.src) == "115.1.168.192":
+        #     print('({},{},{},{},{})'.format(k.protocol, dec2addr(k.src),
+        #                                     dec2addr(k.dest), k.src_port,
+        #                                     k.dest_port))
         #         print("Protocol:", k.protocolIdentifier)
         #         print("Flow Duration:", v.flowEndTime - v.flowStartTime)
         #         print("Total Fwd Packet:", v.packetNum)
@@ -142,7 +139,7 @@ while 1:
         #         print("End Way:", v.endWay)
         time.sleep(1)
         for k, v in exception_table.items():
-            print(dec2addr(k.sourceIPAddress), ":", v)
+            print(dec2addr(k.src), ":", v)
         print("----------------------------")
 
     except KeyboardInterrupt:

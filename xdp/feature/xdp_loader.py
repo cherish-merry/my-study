@@ -60,36 +60,36 @@ for i in range(value.shape[0]):
 fn = b.load_func("my_program", BPF.XDP)
 b.attach_xdp(device, fn, 0)
 
-# print("hit CTRL+C to stop")
-#
-# while 1:
-#     try:
-#         for k in statistic_table.keys():
-#             val = statistic_table.sum(k).value
-#             i = k.value
-#             if i == 0:
-#                 print("packet_num:", val)
-#             if i == 1:
-#                 print("tcp:", val)
-#             if i == 2:
-#                 print("udp:", val)
-#             if i == 3:
-#                 print("flow:", val)
-#             if i == 4:
-#                 print("flow_timeout:", val)
-#             if i == 5:
-#                 print("flow_fin:", val)
-#             if i == 6:
-#                 print("flow_rst:", val)
-#             if i == 7:
-#                 print("exception:", val)
-#         time.sleep(1)
-#         for k, v in exception_table.items():
-#             print(dec2addr(k.sourceIPAddress), ":", v)
-#         print("----------------------------")
-#
-#     except KeyboardInterrupt:
-#         print("Removing filter from device")
-#         break
+print("hit CTRL+C to stop")
 
-# b.remove_xdp(device, 0)
+while 1:
+    try:
+        for k in statistic_table.keys():
+            val = statistic_table.sum(k).value
+            i = k.value
+            if i == 0:
+                print("packet_num:", val)
+            if i == 1:
+                print("tcp:", val)
+            if i == 2:
+                print("udp:", val)
+            if i == 3:
+                print("flow:", val)
+            if i == 4:
+                print("flow_timeout:", val)
+            if i == 5:
+                print("flow_fin:", val)
+            if i == 6:
+                print("flow_rst:", val)
+            if i == 7:
+                print("exception:", val)
+        time.sleep(1)
+        for k, v in exception_table.items():
+            print(dec2addr(k.sourceIPAddress), ":", v)
+        print("----------------------------")
+
+    except KeyboardInterrupt:
+        print("Removing filter from device")
+        break
+
+b.remove_xdp(device, 0)

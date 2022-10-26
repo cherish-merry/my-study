@@ -224,7 +224,7 @@ int my_program(struct xdp_md *ctx) {
     struct tcphdr *th;
     struct udphdr *uh;
 
-    printStatistic();
+//    printStatistic();
     statistic.increment(statistic_packet_num);
 
 

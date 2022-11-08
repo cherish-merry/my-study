@@ -15,10 +15,8 @@ def label(s):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv("dataset/CICIDS.csv",
+    df = pd.read_csv("dataset/CICIDS-15.csv",
                      converters={"Label": label})
-    df = df.drop(['Init Fwd Win Byts'], axis=1)
-    df = df.drop(['URG Flag Cnt'], axis=1)
     df = df.drop(['Protocol'], axis=1)
 
     df1 = df.drop(df[df['Label'] == 0].index)
@@ -32,24 +30,26 @@ if __name__ == '__main__':
     columns = np.array(df.columns)
     print(columns)
 
-    plt.figure(figsize=(8, 6), dpi=300)
-    plt.subplot(1, 2, 1)
-    sns.kdeplot(data=df1, x="Pkt Len Mean", color="red")
-    sns.kdeplot(data=df2, x="Pkt Len Mean", color="green")
-    plt.legend(labels=["Attack", "Normal"], frameon=False)
+    # plt.figure(figsize=(8, 6), dpi=300)
+    # plt.subplot(1, 2, 1)
+    # sns.kdeplot(data=df1, x="Pkt Len Mean", color="red", log_scale=2)
+    # sns.kdeplot(data=df2, x="Pkt Len Mean", color="green", log_scale=2)
+    # plt.legend(labels=["Attack", "Normal"], frameon=False)
+    #
+    # plt.subplot(1, 2, 2)
+    # sns.kdeplot(data=df1, x="Flow IAT Min", color="red", log_scale=2)
+    # sns.kdeplot(data=df2, x="Flow IAT Min", color="green", log_scale=2)
+    # plt.legend(labels=["Attack", "Normal"], frameon=False)
 
-    plt.subplot(1, 2, 2)
-    sns.kdeplot(data=df1, x="Flow IAT Min", color="red")
-    sns.kdeplot(data=df2, x="Flow IAT Min", color="green")
-    plt.legend(labels=["Attack", "Normal"], frameon=False)
-
-    # plt.figure(dpi=64)
-    # for i in range(1, columns.size):
-    #     plt.subplot(4, 4, i)
-    #     sns.kdeplot(data=df1, x=columns[i - 1], color="red")
-    #     sns.kdeplot(data=df2, x=columns[i - 1], color="green")
-    #     plt.legend(labels=["Attack", "Normal"], frameon=False)
+    plt.figure(dpi=64)
+    for i in range(1, columns.size):
+        df3 = df1.drop(df1[df1[columns[i - 1]] == 0].index)
+        df4 = df2.drop(df2[df2[columns[i - 1]] == 0].index)
+        plt.subplot(4, 4, i)
+        sns.kdeplot(data=df3, x=columns[i - 1], color="red", log_scale=2)
+        sns.kdeplot(data=df4, x=columns[i - 1], color="green", log_scale=2)
+        plt.legend(labels=["Attack", "Normal"], frameon=False)
 
     plt.tight_layout()
-    plt.savefig("feature.svg", dpi=300, format="svg")
-    # plt.show()
+    # plt.savefig("feature.svg", dpi=300, format="svg")
+    plt.show()

@@ -19,7 +19,7 @@ def label(s):
 
 
 if __name__ == '__main__':
-    df = pd.read_csv("dataset/CICIDS.csv",
+    df = pd.read_csv("dataset/CICIDS-ip-15.csv",
                      converters={"Label": label})
     print(df.shape)
 
@@ -29,9 +29,11 @@ if __name__ == '__main__':
 
     # df = df.drop(df[df['Flow Duration'] == 0].index)
 
-    df = df.drop(['Init Fwd Win Byts'], axis=1)
-    df = df.drop(['URG Flag Cnt'], axis=1)
-    df = df.drop(['Protocol'], axis=1)
+    # df = df.drop(['Protocol'], axis=1)
+    # df = df.drop(['FIN Flag Cnt'], axis=1)
+    # df = df.drop(['SYN Flag Cnt'], axis=1)
+    # df = df.drop(['RST Flag Cnt'], axis=1)
+    # df = df.drop(['PSH Flag Cnt'], axis=1)
 
     # print(df.shape)
 
@@ -55,13 +57,14 @@ if __name__ == '__main__':
 
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.0005
+    percentage = 0.001
 
     max_depth = 15
 
     max_leaf_nodes = 1024
 
-    min_samples_leaf = int(exceptions * percentage)
+    # min_samples_leaf = int(exceptions * percentage)
+    min_samples_leaf = 1
 
     print("exceptions:", exceptions)
     print("max_depth:", max_depth)
@@ -73,6 +76,7 @@ if __name__ == '__main__':
     clf = tree.DecisionTreeClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes,
                                       min_samples_leaf=min_samples_leaf,
                                       min_samples_split=min_samples_leaf * 2, min_impurity_decrease=0.0001)
+
     clf = clf.fit(train_x, train_y)
 
     print("\n\n feature")
@@ -81,16 +85,16 @@ if __name__ == '__main__':
         if key > 0:
             print(columns[key].strip())
 
-    clf.tree_.children_left.tofile("../xdp/feature/result/childLeft.bin")
-    clf.tree_.children_right.tofile("../xdp/feature/result/childrenRight.bin")
-    clf.tree_.feature.tofile("../xdp/feature/result/feature.bin")
-    clf.tree_.threshold.astype(int).tofile("../xdp/feature/result/threshold.bin")
-    (clf.tree_.impurity * 100).astype(int).tofile("../xdp/feature/result/impurity.bin")
+    clf.tree_.children_left.tofile("../xdp/result/childLeft.bin")
+    clf.tree_.children_right.tofile("../xdp/result/childrenRight.bin")
+    clf.tree_.feature.tofile("../xdp/result/feature.bin")
+    clf.tree_.threshold.astype(int).tofile("../xdp/result/threshold.bin")
+    (clf.tree_.impurity * 100).astype(int).tofile("../xdp/result/impurity.bin")
     value = []
     values = clf.tree_.value
     for val in values:
         value.append(np.argmax(val))
-    np.array(value).tofile("../xdp/feature/result/value.bin")
+    np.array(value).tofile("../xdp/result/value.bin")
 
     # print(np.fromfile("../xdp/feature/result/childLeft.bin", dtype=int))
     # print(np.fromfile("../xdp/feature/result/childrenRight.bin", dtype=int))
@@ -105,7 +109,7 @@ if __name__ == '__main__':
                                     filled=True, rounded=True,
                                     special_characters=True)
     graph = graphviz.Source(dot_data)
-    graph.render("../xdp/feature/result/decide_tree")
+    graph.render("../xdp/result/decide_tree")
 
     # predict
     predict_y = clf.predict(test_x)

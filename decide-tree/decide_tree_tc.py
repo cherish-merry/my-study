@@ -107,12 +107,12 @@ if __name__ == '__main__':
         value.append(np.argmax(val))
     np.array(value).tofile("../xdp/feature/result/value.bin")
 
-    print(np.fromfile("../xdp/feature/result/childLeft.bin", dtype=int))
-    print(np.fromfile("../xdp/feature/result/childrenRight.bin", dtype=int))
-    print(np.fromfile("../xdp/feature/result/feature.bin", dtype=int))
-    print(np.fromfile("../xdp/feature/result/threshold.bin", dtype=int))
-    print(np.fromfile("../xdp/feature/result/value.bin", dtype=int))
-    print(np.fromfile("../xdp/feature/result/impurity.bin", dtype=int))
+    print(np.fromfile("../xdp/result/childLeft.bin", dtype=int))
+    print(np.fromfile("../xdp/result/childrenRight.bin", dtype=int))
+    print(np.fromfile("../xdp/result/feature.bin", dtype=int))
+    print(np.fromfile("../xdp/result/threshold.bin", dtype=int))
+    print(np.fromfile("../xdp/result/value.bin", dtype=int))
+    print(np.fromfile("../xdp/result/impurity.bin", dtype=int))
 
     dot_data = tree.export_graphviz(clf, out_file=None,
                                     feature_names=columns[:columns.shape[0] - 1],

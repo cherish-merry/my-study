@@ -7,7 +7,7 @@
 
 #define MAX_TREE_DEPTH  15
 #define TREE_LEAF -1
-#define FEATURE_VEC_LENGTH 12
+#define FEATURE_VEC_LENGTH 17
 #define flow_timeout  15000
 #define statistic_packet_num  0
 #define statistic_tcp  1
@@ -31,8 +31,8 @@ struct FLOW_KEY {
     u8 protocol;
     u32 src;
     u32 dest;
-    u32 src_port;
-    u32 dest_port;
+//    u32 src_port;
+//    u32 dest_port;
 };
 
 struct FLOW_FEATURE_NODE {
@@ -98,39 +98,42 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
 
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
-    feature_vec[0] = flow->flow_end_time - flow->flow_start_time;
-
-    feature_vec[1] = flow->packet_length.sum * 1000 / (flow->flow_end_time - flow->flow_start_time);
-
-    feature_vec[2] = flow->packet_length.n * 1000 / (flow->flow_end_time - flow->flow_start_time);
-
-    feature_vec[3] = flow->iat.sum / flow->iat.n;
-
-    feature_vec[4] = flow->iat.m2 / (flow->iat.n - 1);
-
-    feature_vec[5] = flow->iat.max;
-
-    feature_vec[6] = flow->iat.min;
-
-    feature_vec[7] = flow->packet_length.n;
-
-    feature_vec[8] = flow->packet_length.min;
-
-    feature_vec[9] = flow->packet_length.max;
+    feature_vec[0] = flow->protocol;
 
 
-    feature_vec[10] = flow->packet_length.sum / flow->packet_length.n;
+    feature_vec[1] = flow->flow_end_time - flow->flow_start_time;
 
-    feature_vec[11] = flow->packet_length.m2 / (flow->packet_length.n - 1);
+    feature_vec[2] = flow->packet_length.sum * 1000 / (flow->flow_end_time - flow->flow_start_time);
+
+    feature_vec[3] = flow->packet_length.n * 1000 / (flow->flow_end_time - flow->flow_start_time);
+
+    feature_vec[4] = flow->iat.sum / flow->iat.n;
+
+    feature_vec[5] = flow->iat.m2 / (flow->iat.n - 1);
+
+    feature_vec[6] = flow->iat.max;
+
+    feature_vec[7] = flow->iat.min;
+
+    feature_vec[8] = flow->packet_length.n;
+
+    feature_vec[9] = flow->packet_length.min;
+
+    feature_vec[10] = flow->packet_length.max;
 
 
-//    feature_vec[12] = flow->fin;
-//
-//    feature_vec[13] = flow->syn;
-//
-//    feature_vec[14] = flow->rst;
-//
-//    feature_vec[15] = flow->psh;
+    feature_vec[11] = flow->packet_length.sum / flow->packet_length.n;
+
+    feature_vec[12] = flow->packet_length.m2 / (flow->packet_length.n - 1);
+
+
+    feature_vec[13] = flow->fin;
+
+    feature_vec[14] = flow->syn;
+
+    feature_vec[15] = flow->rst;
+
+    feature_vec[16] = flow->psh;
 
 
     for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
@@ -228,13 +231,13 @@ int my_program(struct xdp_md *ctx) {
         return XDP_DROP;
     }
 
-    if (ip->saddr != 1929488576) {
-        return XDP_PASS;
-    }
+//    if (ip->saddr != 1929488576) {
+//        return XDP_PASS;
+//    }
 
     if (ip->protocol == IPPROTO_TCP || ip->protocol == IPPROTO_UDP) {
         u8 protocol;
-        u32 src_port, dest_port;
+//        u32 src_port, dest_port;
         struct PACKET_INFO packet_info = {};
 
         if (ip->protocol == IPPROTO_TCP) {
@@ -245,8 +248,8 @@ int my_program(struct xdp_md *ctx) {
             statistic.increment(statistic_tcp);
             protocol = IPPROTO_TCP;
             packet_info.payload = data_end - (void *) (long) (th) - (th->doff << 2);
-            src_port = th->source;
-            dest_port = th->dest;
+//            src_port = th->source;
+//            dest_port = th->dest;
             packet_info.fin = th->fin;
             packet_info.syn = th->syn;
             packet_info.psh = th->psh;
@@ -262,16 +265,16 @@ int my_program(struct xdp_md *ctx) {
             statistic.increment(statistic_udp);
             protocol = IPPROTO_UDP;
             packet_info.payload = data_end - (void *) (long) (uh + 1);
-            src_port = uh->source;
-            dest_port = uh->dest;
+//            src_port = uh->source;
+//            dest_port = uh->dest;
         }
 
         struct FLOW_KEY flow_key = {};
         flow_key.protocol = protocol;
         flow_key.src = ip->saddr;
         flow_key.dest = ip->daddr;
-        flow_key.src_port = src_port;
-        flow_key.dest_port = dest_port;
+//        flow_key.src_port = src_port;
+//        flow_key.dest_port = dest_port;
 
         packet_info.flow_key = &flow_key;
         packet_info.current_time = bpf_ktime_get_ns() / 1000000;
@@ -285,7 +288,7 @@ int my_program(struct xdp_md *ctx) {
         if (packet_info.current_time - flow->flow_start_time > flow_timeout) {
             statistic.increment(statistic_flow_end);
             //analysis
-            if(analysis(flow) == 1){
+            if (analysis(flow) == 1) {
                 u32 one = 1;
                 u32 * val = exception_table.lookup(&flow_key.src);
                 if (val) {

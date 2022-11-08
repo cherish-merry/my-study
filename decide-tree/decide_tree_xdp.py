@@ -57,14 +57,14 @@ if __name__ == '__main__':
 
     exceptions = train_data.Label.value_counts().values[1]
 
-    percentage = 0.001
+    percentage = 0.01
 
     max_depth = 15
 
     max_leaf_nodes = 1024
 
     # min_samples_leaf = int(exceptions * percentage)
-    min_samples_leaf = 1
+    min_samples_leaf = 2
 
     print("exceptions:", exceptions)
     print("max_depth:", max_depth)
@@ -133,26 +133,3 @@ if __name__ == '__main__':
     # plt.plot(range(1, 37), test, color="red", label="max_depth")
     # plt.legend()
     # plt.show()
-
-'''
-Bwd Packet Length Mean
-Packet Length Mean
-Total Length of Bwd Packets
-Init_Win_bytes_backward
-Active Mean
-Fwd IAT Total
-Bwd Packets/s
-Fwd Packet Length Max
-URG Flag Count
-Total Backward Packets
-Init_Win_bytes_forward
-Idle Max
-Total Fwd Packets
-Flow IAT Min
-Fwd Packet Length Min
-Flow IAT Mean
-Total Length of Fwd Packets
-Flow Bytes/s
-SYN Flag Count
-Bwd IAT Min
-'''

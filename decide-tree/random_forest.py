@@ -50,60 +50,15 @@ exceptions = train_data.Label.value_counts().values[1]
 max_depth = 8
 max_leaf_nodes = 64
 
-# decide tree
-dt = DecisionTreeClassifier()
-dt.fit(train_x, train_y)
-dt_pred = dt.predict(test_x)
-print("decide tree:")
-print_score(dt_pred, test_y)
-print("-----------------------------------")
-
-# random forest
-rf = RandomForestClassifier()
-rf.fit(train_x, train_y)
-rf_pred = rf.predict(test_x)
-print("random forest:")
-print_score(rf_pred, test_y)
-print("-----------------------------------")
-
-# test = []
-# for i in range(100):
-#     rf2 = RandomForestClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes, n_estimators=i + 1)
-#     rf2.fit(train_x, train_y)
-#     rf2_pred = rf2.predict(test_x)
-#     test.append(log_loss(rf2_pred, test_y))
-# plt.plot(range(1, 101), test, color="red", label="tree num")
-# plt.legend()
-# plt.show()
-
-# knn
-knn = KNeighborsClassifier()
-knn.fit(train_x, train_y)
-knn_pred = knn.predict(test_x)
-print("knn:")
-print_score(knn_pred, test_y)
-print("-----------------------------------")
-
-# svm
-svm = SVC()
-svm.fit(train_x, train_y)
-svm_pred = svm.predict(test_x)
-print("svm:")
-print_score(svm_pred, test_y)
-print("-----------------------------------")
-
-# naive_bayes
-nb = MultinomialNB()
-nb.fit(train_x, train_y)
-nb_pred = nb.predict(test_x)
-print("nb:")
-print_score(nb_pred, test_y)
-print("-----------------------------------")
-
-# LR
-lr = LogisticRegression(max_iter=1000)
-lr.fit(train_x, train_y)
-lr_pred = lr.predict(test_x)
-print("lr:")
-print_score(lr_pred, test_y)
-print("-----------------------------------")
+logLoss = []
+f1Score = []
+for i in range(100):
+    rf2 = RandomForestClassifier(max_depth=max_depth, max_leaf_nodes=max_leaf_nodes, n_estimators=i + 1)
+    rf2.fit(train_x, train_y)
+    rf2_pred = rf2.predict(test_x)
+    logLoss.append(log_loss(rf2_pred, test_y))
+    f1Score.append(f1_score(rf2_pred, test_y))
+plt.plot(range(1, 101), logLoss, color="red", label="Log Loss")
+plt.plot(range(1, 101), f1Score, color="green", label="Log Loss")
+plt.legend()
+plt.show()

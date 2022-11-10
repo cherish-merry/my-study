@@ -5,7 +5,8 @@
 #include <linux/in.h>
 #include <linux/ip.h>
 
-#define MAX_TREE_DEPTH  15
+#define MAX_TREE_DEPTH  12
+#define RANDOM_FOREST_TREE_NUM  15
 #define TREE_LEAF -1
 #define FEATURE_VEC_LENGTH 17
 #define flow_timeout  15000
@@ -69,7 +70,6 @@ struct PACKET_INFO {
 };
 
 BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, flow_table,  10000000);
-BPF_TABLE("lru_hash", struct FLOW_KEY,  struct FLOW_FEATURE_NODE, result_table,  10000);
 BPF_TABLE("lru_hash", u32,  u32 , exception_table,  10000);
 BPF_PERCPU_ARRAY(statistic, u32,
 8);
@@ -93,8 +93,8 @@ void static increase(struct STATISTIC *statistic, u32 d) {
     statistic->m2 += (statistic->n - 1) * statistic->dev * statistic->dev / statistic->n;
 }
 
-u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
-    if (flow->flow_end_time - flow->flow_start_time < 1 || flow->packet_length.n < 1) return 0;
+void static analysis(struct FLOW_FEATURE_NODE *flow) {
+    if (flow->flow_end_time - flow->flow_start_time < 1 || flow->packet_length.n < 1) return;
 
     u64 feature_vec[FEATURE_VEC_LENGTH];
 
@@ -136,37 +136,48 @@ u32 static analysis(struct FLOW_FEATURE_NODE *flow) {
     feature_vec[16] = flow->psh;
 
 
-    for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
-        bpf_trace_printk("%u:%u", i, feature_vec[i]);
-    }
+//    for (int i = 0; i < FEATURE_VEC_LENGTH; i++) {
+//        bpf_trace_printk("%u:%u", i, feature_vec[i]);
+//    }
 
-    u32 current_node = 0;
-    for (int i = 0; i < MAX_TREE_DEPTH; i++) {
-        s32 *left_val = child_left.lookup(&current_node);
-        s32 *right_val = child_right.lookup(&current_node);
-        s32 *feature_val = feature.lookup(&current_node);
-        u64 *threshold_val = threshold.lookup(&current_node);
-        if (left_val == NULL || right_val == NULL || feature_val == NULL ||
-            threshold_val == NULL || *left_val == TREE_LEAF ||
-            *feature_val > sizeof(feature_vec) / sizeof(feature_vec[0]) || *feature_val >= FEATURE_VEC_LENGTH) {
-            break;
+    u32 positive = 0;
+    u32 idx = 0;
+    for (int i = 0; i < RANDOM_FOREST_TREE_NUM; i++) {
+        u32 current_node = idx;
+        for (int j = 0; j < MAX_TREE_DEPTH; j++) {
+            s32 *left_val = child_left.lookup(&current_node);
+            s32 *right_val = child_right.lookup(&current_node);
+            s32 *feature_val = feature.lookup(&current_node);
+            u64 *threshold_val = threshold.lookup(&current_node);
+            if (left_val == NULL || right_val == NULL || feature_val == NULL ||
+                threshold_val == NULL || *left_val == TREE_LEAF ||
+                *feature_val > sizeof(feature_vec) / sizeof(feature_vec[0]) || *feature_val >= FEATURE_VEC_LENGTH) {
+                break;
+            }
+            u64 a = feature_vec[*feature_val];
+            if (a <= *threshold_val) current_node = *left_val;
+            else current_node = *right_val;
+//            bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
         }
-        u64 a = feature_vec[*feature_val];
-        if (a <= *threshold_val) current_node = *left_val;
-        else current_node = *right_val;
-        bpf_trace_printk("feature_val:%u,threshold_val:%lu,feature_vec:%lu", *feature_val, *threshold_val, a);
+        u32 * value_val = value.lookup(&current_node);
+        if (value_val != NULL) {
+            positive += *value_val;
+        }
+        int size_idx = i;
+        u32 * tree_size = size.lookup(&size_idx);
+        if (tree_size != NULL) {
+            idx += *tree_size;
+        }
+//        bpf_trace_printk("idx:%u\n", idx);
     }
-    u32 * value_val = value.lookup(&current_node);
-    if (value_val == NULL) return 0;
-
-    if (*value_val == 1) {
+    bpf_trace_printk("Positive:%u\n", positive);
+    if (positive > RANDOM_FOREST_TREE_NUM / 2) {
         statistic.increment(statistic_exception);
         bpf_trace_printk("Label: Attack\n");
     } else {
         bpf_trace_printk("Label: Normal\n");
     }
     bpf_trace_printk("------------------------------------------------------");
-    return *value_val;
 }
 
 
@@ -287,14 +298,7 @@ int my_program(struct xdp_md *ctx) {
 
         if (packet_info.current_time - flow->flow_start_time > flow_timeout) {
             statistic.increment(statistic_flow_end);
-            //analysis
-            if (analysis(flow) == 1) {
-                u32 one = 1;
-                u32 * val = exception_table.lookup(&flow_key.src);
-                if (val) {
-                    *val += 1;
-                } else exception_table.insert(&flow_key.src, &one);
-            }
+            analysis(flow);
             flow_table.delete(&flow_key);
             //addFirstPacket
             addFirstPacket(&packet_info);

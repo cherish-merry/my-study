@@ -4,7 +4,8 @@ from sklearn import tree
 import graphviz
 import collections
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import log_loss, accuracy_score, f1_score, recall_score, precision_score, roc_auc_score
+from sklearn.metrics import confusion_matrix, log_loss, accuracy_score, f1_score, recall_score, precision_score, \
+    roc_auc_score
 
 
 def label(s):
@@ -20,7 +21,7 @@ def process_data():
     df[df < 0] = 0
     x = df.iloc[:, :-1]
     y = df.iloc[:, -1]
-    train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=0.6, random_state=0)
+    train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=0.4, random_state=0)
 
     columns = df.columns
     # print(columns)
@@ -40,27 +41,27 @@ def print_score(pred, test):
     print("f1_score:", f1_score(pred, test))
     print("log_loss:", log_loss(pred, test))
     print("roc_auc_score:", roc_auc_score(pred, test))
+    print("confusion_matrix", confusion_matrix(test, pred))
 
 
 def export_tree(dt_tree, col):
     class_names = ["Normal", "Exception"]
-    dt_tree.tree_.children_left.tofile("../xdp/result/childLeft.bin")
-    dt_tree.tree_.children_right.tofile("../xdp/result/childrenRight.bin")
-    dt_tree.tree_.feature.tofile("../xdp/result/feature.bin")
-    dt_tree.tree_.threshold.astype(int).tofile("../xdp/result/threshold.bin")
-    (dt_tree.tree_.impurity * 100).astype(int).tofile("../xdp/result/impurity.bin")
+    dt_tree.tree_.children_left.tofile("../xdp/dt/childLeft.bin")
+    dt_tree.tree_.children_right.tofile("../xdp/dt/childrenRight.bin")
+    dt_tree.tree_.feature.tofile("../xdp/dt/feature.bin")
+    dt_tree.tree_.threshold.astype(int).tofile("../xdp/dt/threshold.bin")
     value = []
     values = dt_tree.tree_.value
     for val in values:
         value.append(np.argmax(val))
-    np.array(value).tofile("../xdp/result/value.bin")
+    np.array(value).tofile("../xdp/dt/value.bin")
 
-    # print(np.fromfile("../xdp/result/childLeft.bin", dtype=int))
-    # print(np.fromfile("../xdp/result/childrenRight.bin", dtype=int))
-    # print(np.fromfile("../xdp/result/feature.bin", dtype=int))
-    # print(np.fromfile("../xdp/result/threshold.bin", dtype=int))
-    # print(np.fromfile("../xdp/result/value.bin", dtype=int))
-    # print(np.fromfile("../xdp/result/impurity.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/childLeft.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/childrenRight.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/feature.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/threshold.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/value.bin", dtype=int))
+    # print(np.fromfile("../xdp/dt/impurity.bin", dtype=int))
 
     dot_data = tree.export_graphviz(dt_tree, out_file=None,
                                     feature_names=col[:col.shape[0] - 1],
@@ -68,17 +69,4 @@ def export_tree(dt_tree, col):
                                     filled=True, rounded=True,
                                     special_characters=True)
     graph = graphviz.Source(dot_data)
-    graph.render("../xdp/result/decide_tree")
-
-
-def export_decide_tree(dt):
-    dt.children_left.tofile("../xdp/result/childLeft.bin")
-    dt.children_right.tofile("../xdp/result/childrenRight.bin")
-    dt.feature.tofile("../xdp/result/feature.bin")
-    dt.threshold.astype(int).tofile("../xdp/result/threshold.bin")
-    (dt.impurity * 100).astype(int).tofile("../xdp/result/impurity.bin")
-    value = []
-    values = dt.tree_.value
-    for val in values:
-        value.append(np.argmax(val))
-    np.array(value).tofile("../xdp/result/value.bin")
+    graph.render("../xdp/dt/decide_tree")

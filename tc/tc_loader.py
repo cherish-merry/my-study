@@ -14,12 +14,12 @@ def dec2addr(dec):
     return ".".join([str(dec >> x & 0xff) for x in [0, 8, 16, 24]])
 
 
-childrenLeft = np.fromfile("../xdp/result/childLeft.bin", dtype=int)
-childrenRight = np.fromfile("../xdp/result/childrenRight.bin", dtype=int)
-feature = np.fromfile("../xdp/result/feature.bin", dtype=int)
-threshold = np.fromfile("../xdp/result/threshold.bin", dtype=int)
-value = np.fromfile("../xdp/result/value.bin", dtype=int)
-impurity = np.fromfile("../xdp/result/impurity.bin", dtype=int)
+childrenLeft = np.fromfile("../xdp/dt/childLeft.bin", dtype=int)
+childrenRight = np.fromfile("../xdp/dt/childrenRight.bin", dtype=int)
+feature = np.fromfile("../xdp/dt/feature.bin", dtype=int)
+threshold = np.fromfile("../xdp/dt/threshold.bin", dtype=int)
+value = np.fromfile("../xdp/dt/value.bin", dtype=int)
+impurity = np.fromfile("../xdp/dt/impurity.bin", dtype=int)
 
 decide_tree_map = "BPF_ARRAY(child_left, s32," + str(childrenLeft.shape[0]) + ");\n" + \
                   "BPF_ARRAY(child_right, s32," + str(childrenRight.shape[0]) + ");\n" + \

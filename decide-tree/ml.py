@@ -40,7 +40,7 @@ print_score(nb_pred, test_y)
 print("-----------------------------------")
 
 # LR
-lr = LogisticRegression(max_iter=1000)
+lr = LogisticRegression(max_iter=10000)
 lr.fit(train_x, train_y)
 lr_pred = lr.predict(test_x)
 print("lr:")

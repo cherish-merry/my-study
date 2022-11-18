@@ -32,15 +32,21 @@ if __name__ == '__main__':
     print(columns)
 
     plt.figure(dpi=300)
+
     plt.subplot(1, 2, 1)
+    sns.kdeplot(data=df1, x="Flow Pkts/s", color="red")
+    sns.kdeplot(data=df2, x="Flow Pkts/s", color="green")
+    plt.legend(labels=["Attack", "Normal"], frameon=False)
+
+    plt.subplot(1, 2, 2)
     sns.kdeplot(data=df1, x="Pkt Len Mean", color="red")
     sns.kdeplot(data=df2, x="Pkt Len Mean", color="green")
     plt.legend(labels=["Attack", "Normal"], frameon=False)
 
-    plt.subplot(1, 2, 2)
-    sns.kdeplot(data=df1, x="Flow IAT Max", color="red")
-    sns.kdeplot(data=df2, x="Flow IAT Max", color="green")
-    plt.legend(labels=["Attack", "Normal"], frameon=False)
+    # plt.subplot(1, 3, 3)
+    # sns.kdeplot(data=df1, x="Flow IAT Max", color="red")
+    # sns.kdeplot(data=df2, x="Flow IAT Max", color="green")
+    # plt.legend(labels=["Attack", "Normal"], frameon=False)
 
     # plt.figure(dpi=300)
     # for i in range(1, columns.size - 1):
@@ -50,7 +56,6 @@ if __name__ == '__main__':
     #     sns.kdeplot(data=df3, x=columns[i - 1], color="red")
     #     sns.kdeplot(data=df4, x=columns[i - 1], color="green")
     #     plt.legend(labels=["Attack", "Normal"], frameon=False)
-
     plt.tight_layout()
     plt.savefig("feature.svg", dpi=300, format="svg")
     plt.show()

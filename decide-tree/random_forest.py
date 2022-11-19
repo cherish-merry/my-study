@@ -4,7 +4,6 @@ from utils import process_data, print_score
 from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
 
-# 33956 1084
 def plot():
     log_loss_plot = []
     num = 20

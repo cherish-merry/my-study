@@ -6,18 +6,41 @@ import collections
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, log_loss, accuracy_score, f1_score, recall_score, precision_score, \
     roc_auc_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+
+def binary(s):
+    if (s == "BENIGN"):
+        return 0
+    return 1
 
 
-def label(s):
+def multi(s):
     if s == "BENIGN":
         return 0
-    else:
+    if s == "DoS":
         return 1
+    if s == "portScan":
+        return 2
+    if s == "bruteForce":
+        return 3
+    if s == "ddos":
+        return 4
+    if s == "heartbleed":
+        return 5
+    if s == "infiltration":
+        return 6
+    if s == "Web Attack":
+        return 7
+    if s == "botnet":
+        return 8
 
 
 def process_data():
     # 数据预处理
-    df = pd.read_csv("dataset/CICIDS-ip-15.csv", converters={"Label": label})
+    df = pd.read_csv("dataset/CICIDS2017-15s.csv", converters={"Label": binary})
+    df = df.drop("Time", axis=1)
+    print(df.columns)
     df[df < 0] = 0
     x = df.iloc[:, :-1]
     y = df.iloc[:, -1]
@@ -32,6 +55,22 @@ def process_data():
     print("---------------------------------")
 
     return columns, train_x, test_x, train_y, test_y
+
+
+def process_data2():
+    # 数据预处理
+    df = pd.read_csv("dataset/CICIDS2017-15s.csv", converters={"Label": binary})
+    df = df.drop("Time", axis=1)
+    df[df < 0] = 0
+    x = df.iloc[:, :-1]
+    y = df.iloc[:, -1]
+    # scaler = StandardScaler()
+    scaler = MinMaxScaler()
+    # 对数据进行归一化处理
+    x = scaler.fit_transform(x)
+    columns = df.columns
+
+    return columns, x, y
 
 
 def print_score(pred, test):

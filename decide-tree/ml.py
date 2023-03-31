@@ -16,7 +16,7 @@ print_score(dt_pred, test_y)
 print("-----------------------------------")
 
 # random forest
-rf = RandomForestClassifier(n_estimators=11)
+rf = RandomForestClassifier()
 rf.fit(train_x, train_y)
 rf_pred = rf.predict(test_x)
 print("random forest:")
@@ -24,12 +24,12 @@ print_score(rf_pred, test_y)
 print("-----------------------------------")
 
 # knn
-knn = KNeighborsClassifier()
-knn.fit(train_x, train_y)
-knn_pred = knn.predict(test_x)
-print("knn:")
-print_score(knn_pred, test_y)
-print("-----------------------------------")
+# knn = KNeighborsClassifier()
+# knn.fit(train_x, train_y)
+# knn_pred = knn.predict(test_x)
+# print("knn:")
+# print_score(knn_pred, test_y)
+# print("-----------------------------------")
 
 # naive_bayes
 nb = MultinomialNB()

@@ -3,16 +3,25 @@ import numpy as np
 from utils import process_data, print_score
 from sklearn.ensemble import RandomForestClassifier
 import matplotlib.pyplot as plt
+from sklearn.metrics import log_loss
+
 
 def plot():
     log_loss_plot = []
     num = 20
     for i in range(num):
-        rf_plot = RandomForestClassifier(max_depth=9, n_estimators=i + 1, min_impurity_decrease=0.0001)
+        rf_plot = RandomForestClassifier(min_impurity_decrease=(20 - i) * 0.001)
         rf_plot.fit(train_x, train_y)
         rf_pred_plot = rf_plot.predict(test_x)
-        log_loss_plot.append(log_loss_plot(rf_pred_plot, test_y))
-    plt.plot(range(1, num + 1), log_loss_plot, color="red", label="Log Loss")
+        log_loss_plot.append(log_loss(rf_pred_plot, test_y))
+    x = list(range(num, 0, -1))
+    y = [i * 0.001 for i in x]
+    plt.plot(y, log_loss_plot, color="red")
+
+    plt.xlabel("Impurity")
+    plt.ylabel("Log Loss")
+
+    plt.savefig("rf.svg", dpi=300, format="svg")
     plt.legend()
     plt.show()
 
@@ -39,12 +48,13 @@ if __name__ == '__main__':
     rf_pred = rf.predict(test_x)
     print_score(rf_pred, test_y)
 
-    left.tofile("../xdp/rf/childLeft.bin")
-    right.tofile("../xdp/rf/childrenRight.bin")
-    feature.tofile("../xdp/rf/feature.bin")
-    threshold.astype(int).tofile("../xdp/rf/threshold.bin")
-    value.tofile("../xdp/rf/value.bin")
-    size.tofile("../xdp/rf/size.bin")
+    plot()
+    # left.tofile("../xdp/rf/childLeft.bin")
+    # right.tofile("../xdp/rf/childrenRight.bin")
+    # feature.tofile("../xdp/rf/feature.bin")
+    # threshold.astype(int).tofile("../xdp/rf/threshold.bin")
+    # value.tofile("../xdp/rf/value.bin")
+    # size.tofile("../xdp/rf/size.bin")
 
     # print(np.fromfile("../xdp/rf/childLeft.bin"))
     # print(np.fromfile("../xdp/rf/childrenRight.bin"))

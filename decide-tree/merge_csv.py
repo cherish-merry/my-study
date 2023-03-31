@@ -1,9 +1,9 @@
 import pandas as pd
 import os
 
-folder_path = 'dataset/xdp-ip-15'
+folder_path = 'dataset/xdp-15s/week'
 res_path = 'dataset'
-merge_name = 'CICIDS-ip-15.csv'
+merge_name = 'CICIDS2017-15s.csv'
 
 file_list = os.listdir(folder_path)
 df = pd.read_csv(folder_path + "/" + file_list[0])

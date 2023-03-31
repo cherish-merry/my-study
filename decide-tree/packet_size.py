@@ -30,18 +30,18 @@ import matplotlib.pyplot as plt
 """
 name_list = ['64', "200", '800', '1200', '1500']
 
-snort2 = [1.271, 1.136, 0.986, 0.924, 0.765]
-snort3 = [1.081, 0.857, 0.81, 0.753, 0.709]
-xdp = [1.402, 1.147, 0.906, 0.807, 0.802]
-normal = [1.687, 1.321, 1.17, 0.997, 0.804]
-x_width = 0.5  # 调节横宽度
+normal = [1.682, 1.314, 1.17, 0.997, 0.804]
+snort2 = [1.256, 1.082, 0.944, 0.92, 0.783]
+snort3 = [1.108, 0.849, 0.796, 0.744, 0.716]
+xdp = [1.409, 1.155, 0.908, 0.806, 0.804]
+x_width = 0.4  # 调节横宽度
 x = [0, x_width, 2 * x_width, 3 * x_width, 4 * x_width]
-total_width, n = 0.4, 4
+total_width, n = 0.32, 4
 width = total_width / n
 fontsize = 8  # 字体大小
 fig = plt.figure(figsize=(5.3, 4.3), dpi=300, facecolor='white', edgecolor="white")  # figsize长、宽
 axes = plt.subplot(111)
-axes.bar(x, snort2, width=width, label='Snort2', hatch='\\\\\\', color='white',
+axes.bar(x, snort2, width=width, label='Snort2.9', hatch='\\\\\\', color='white',
          edgecolor='aquamarine')  # hatch：填充图案，edgecolor：填充图案颜色，color：柱形图颜色
 # 给柱形图加上values
 # for a, b in zip(x, snort2):
@@ -69,7 +69,7 @@ axes.bar(x, normal, width=width, label='Normal', tick_label=name_list, hatch='\\
 #     axes.text(a, b + 0.028, '%.4f' % b, ha='center', verticalalignment="top", fontsize=fontsize)
 
 axes.set_ylim(0.4, 1.8)
-plt.xticks(np.asarray([0, x_width, 2 * x_width, 3 * x_width, 4 * x_width]) + total_width / 4,
+plt.xticks(np.asarray([0, x_width, 2 * x_width, 3 * x_width, 4 * x_width]) + width * 1.5,
            name_list)  # 调节横坐标不居中
 
 font1 = {
@@ -79,6 +79,7 @@ font1 = {
 }
 plt.tick_params(labelsize=fontsize)
 plt.legend(loc="upper right", prop=font1)  # 图例位置、大小
-plt.ylabel('PPS/M', font1)  # 纵坐标大小、字体
+plt.ylabel('Mpps', font1)  # 纵坐标大小、字体
 
+plt.savefig("packet_size.svg", dpi=300, format="svg")
 plt.show()

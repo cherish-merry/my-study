@@ -40,8 +40,8 @@ def predict(classifier, name):
     print('ROC AUC', scores['test_roc_auc'].mean())
 
 
-# predict(DecisionTreeClassifier(), "dt")
-# predict(RandomForestClassifier(), "rf")
+predict(DecisionTreeClassifier(), "dt")
+predict(RandomForestClassifier(), "rf")
 predict(LogisticRegression(), "lg")
 predict(MultinomialNB(), "nb")
 predict(KNeighborsClassifier(), "knn")

@@ -1,9 +1,12 @@
 import numpy as np
 
-from utils import process_data, print_score
+from utils import process_data
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_predict
+from sklearn.metrics import classification_report, log_loss
+from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
-from sklearn.metrics import log_loss
+from utils import print_score
 
 
 def plot():
@@ -28,7 +31,7 @@ def plot():
 
 if __name__ == '__main__':
     columns, train_x, test_x, train_y, test_y = process_data()
-    rf = RandomForestClassifier(max_depth=12, n_estimators=15, min_impurity_decrease=0.0001)
+    rf = RandomForestClassifier(max_leaf_nodes=1024, max_depth=12, n_estimators=15)
     rf.fit(train_x, train_y)
 
     left = np.array([])
@@ -45,10 +48,12 @@ if __name__ == '__main__':
         size = np.append(size, dt.tree_.children_left.shape)
         for val in dt.tree_.value:
             value = np.append(value, np.argmax(val))
+
     rf_pred = rf.predict(test_x)
     print_score(rf_pred, test_y)
 
-    plot()
+    # plot()
+
     # left.tofile("../xdp/rf/childLeft.bin")
     # right.tofile("../xdp/rf/childrenRight.bin")
     # feature.tofile("../xdp/rf/feature.bin")

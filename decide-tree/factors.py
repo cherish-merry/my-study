@@ -7,13 +7,13 @@ from utils import binary_process
 columns, x, y = binary_process(None, 100)
 
 # 定义参数空间
-param_dist = {"n_estimators": sp_randint(2, 64),
+param_dist = {"n_estimators": sp_randint(1, 63),
               "max_depth": sp_randint(2, 32),
-              "max_leaf_nodes": sp_randint(4, 1024)}
+              "max_leaf_nodes": sp_randint(16, 512)}
 
 # 使用RandomizedSearchCV进行随机搜索
 clf = RandomForestClassifier()
-random_search = RandomizedSearchCV(clf, param_distributions=param_dist, n_iter=20, cv=5, scoring='accuracy')
+random_search = RandomizedSearchCV(clf, param_distributions=param_dist, n_iter=64, cv=5, scoring='accuracy')
 random_search.fit(x, y)
 
 # 输出最佳参数和最佳得分

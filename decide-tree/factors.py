@@ -9,11 +9,11 @@ columns, x, y = binary_process(None, 100)
 # 定义参数空间
 param_dist = {"n_estimators": sp_randint(1, 63),
               "max_depth": sp_randint(2, 32),
-              "max_leaf_nodes": sp_randint(16, 512)}
+              "max_leaf_nodes": sp_randint(4, 128)}
 
 # 使用RandomizedSearchCV进行随机搜索
 clf = RandomForestClassifier()
-random_search = RandomizedSearchCV(clf, param_distributions=param_dist, n_iter=64, cv=5, scoring='accuracy')
+random_search = RandomizedSearchCV(clf, param_distributions=param_dist, n_iter=128, cv=5, scoring='accuracy')
 random_search.fit(x, y)
 
 # 输出最佳参数和最佳得分

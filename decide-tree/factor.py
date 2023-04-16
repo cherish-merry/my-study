@@ -10,11 +10,11 @@ columns, x, y = binary_process(None, 100)
 
 fig, axs = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), dpi=300)
 
-n_estimators_list = np.linspace(1, 63, num=32, dtype=int)
+n_estimators_list = np.linspace(2, 64, num=63, dtype=int)
 
 max_depths = np.linspace(2, 32, num=31, dtype=int)
 
-max_leaf_nodes = np.linspace(16, 512, num=32, dtype=int)
+max_leaf_nodes = np.linspace(4, 128, num=125, dtype=int)
 
 
 def evaluate(name, intervals, ax, indicator, x_label, y_label):

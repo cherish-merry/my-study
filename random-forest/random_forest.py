@@ -4,6 +4,7 @@ from sklearn.ensemble import RandomForestClassifier
 from utils import print_score
 from utils import binary_process
 from sklearn.model_selection import train_test_split
+import joblib
 
 if __name__ == '__main__':
     columns, x, y = binary_process(None, 100)
@@ -28,6 +29,7 @@ if __name__ == '__main__':
 
     rf_pred = rf.predict(test_x)
     print_score(rf_pred, test_y)
+    joblib.dump(rf, 'random_forest_model.pkl')
 
     left.tofile("../xdp/rf/childLeft.bin")
     right.tofile("../xdp/rf/childrenRight.bin")

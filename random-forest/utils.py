@@ -68,11 +68,23 @@ def process_data():
 
 def binary_process(scaler, rate):
     # 数据预处理
-    df = pd.read_csv("dataset/CICIDS2017-15s.csv", converters={"Label": binary})
-    df = df.drop("Time", axis=1)
-    df[df < 0] = 0
+    df = pd.read_csv("dataset/tcp-flow.csv", converters={"Label": binary})
+    # df = df.drop("Time", axis=1)
+    # df = df.drop(" Source Port", axis=1)
+    # df = df.drop(" Destination IP", axis=1)
+    # df = df.drop(" Destination Port", axis=1)
+    # df = df.drop(" Source IP", axis=1)
+    # df = df.drop(" Protocol", axis=1)
+    # df = df.drop(" Timestamp", axis=1)
+    # df = df.drop("Flow ID", axis=1)
+
+    # df.replace([np.inf, -np.inf], np.nan, inplace=True)  # Replace infinite values with NaN
+    # df.dropna(inplace=True)  # Drop rows containing NaN values
+
+    # df[df < 0] = 0
     x = df.iloc[:, :-1]
     y = df.iloc[:, -1]
+
     # scaler = StandardScaler()
     # scaler = MinMaxScaler()
     # 对数据进行归一化处理
@@ -81,16 +93,18 @@ def binary_process(scaler, rate):
 
     columns = df.columns
 
-    counts = y.value_counts()
+    print(columns)
 
-    # 使用RandomUnderSampler类进行下采样
-    rus = RandomUnderSampler(random_state=0,
-                             sampling_strategy={0: int(counts[0] / rate)})
-    x, y = rus.fit_resample(x, y)
+    # counts = y.value_counts()
 
-    # 插值上采样
-    smote = SMOTE(random_state=0)
-    x, y = smote.fit_resample(x, y)
+    # # 使用RandomUnderSampler类进行下采样
+    # rus = RandomUnderSampler(random_state=0,
+    #                          sampling_strategy={0: int(counts[0] / rate)})
+    # x, y = rus.fit_resample(x, y)
+    #
+    # # 插值上采样
+    # smote = SMOTE(random_state=0)
+    # x, y = smote.fit_resample(x, y)
     # print(y.value_counts())
     return columns, x, y
 
